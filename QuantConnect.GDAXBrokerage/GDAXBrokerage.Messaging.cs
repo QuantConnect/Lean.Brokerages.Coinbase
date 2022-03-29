@@ -220,6 +220,7 @@ namespace QuantConnect.Brokerages.GDAX
             subscriptionManager.UnsubscribeImpl += (s, t) => Unsubscribe(s);
 
             SubscriptionManager = subscriptionManager;
+            ValidateSubscription();
         }
 
         private void OnSnapshot(string data)
