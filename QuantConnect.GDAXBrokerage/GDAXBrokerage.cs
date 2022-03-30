@@ -518,7 +518,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             try
             {
-                var productId = 190;
+                var productId = 183;
                 var userId = Config.GetInt("job-user-id");
                 var token = Config.Get("api-access-token");
                 var organizationId = Config.Get("job-organization-id", null);
