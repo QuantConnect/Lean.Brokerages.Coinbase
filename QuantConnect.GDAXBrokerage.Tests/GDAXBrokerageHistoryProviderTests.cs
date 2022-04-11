@@ -87,36 +87,34 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             Log.Trace("Data points retrieved: " + historyProvider.DataPointCount);
         }
 
-        private static TestCaseData[] TestParameters
+        private static TestCaseData[] TestParameters()
         {
-            get
+            TestGlobals.Initialize();
+            var btcusd = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX);
+
+            return new[]
             {
-                var btcusd = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX);
+                // valid parameters
+                new TestCaseData(btcusd, Resolution.Minute, TickType.Trade, Time.OneHour, false),
+                new TestCaseData(btcusd, Resolution.Hour, TickType.Trade, Time.OneDay, false),
+                new TestCaseData(btcusd, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false),
 
-                return new[]
-                {
-                    // valid parameters
-                    new TestCaseData(btcusd, Resolution.Minute, TickType.Trade, Time.OneHour, false),
-                    new TestCaseData(btcusd, Resolution.Hour, TickType.Trade, Time.OneDay, false),
-                    new TestCaseData(btcusd, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false),
+                // quote tick type, no error, empty result
+                new TestCaseData(btcusd, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true),
 
-                    // quote tick type, no error, empty result
-                    new TestCaseData(btcusd, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true),
+                // invalid resolution, no error, empty result
+                new TestCaseData(btcusd, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), true),
+                new TestCaseData(btcusd, Resolution.Second, TickType.Trade, Time.OneMinute, true),
 
-                    // invalid resolution, no error, empty result
-                    new TestCaseData(btcusd, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), true),
-                    new TestCaseData(btcusd, Resolution.Second, TickType.Trade, Time.OneMinute, true),
+                // invalid period, no error, empty result
+                new TestCaseData(btcusd, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true),
 
-                    // invalid period, no error, empty result
-                    new TestCaseData(btcusd, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true),
+                // invalid symbol, no error, empty result
+                new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.GDAX), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true),
 
-                    // invalid symbol, no error, empty result
-                    new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.GDAX), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true),
-
-                    // invalid security type, no error, empty result
-                    new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true)
-                };
-            }
+                // invalid security type, no error, empty result
+                new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true)
+            };
         }
     }
 }
