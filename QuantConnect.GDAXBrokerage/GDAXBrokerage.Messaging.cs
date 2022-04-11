@@ -358,9 +358,16 @@ namespace QuantConnect.Brokerages.GDAX
             var fillPrice = fill.Price;
             var fillQuantity = direction == OrderDirection.Sell ? -fill.Size : fill.Size;
 
-            var currency = order.PriceCurrency == string.Empty
-                ? _algorithm.Securities[symbol].SymbolProperties.QuoteCurrency
-                : order.PriceCurrency;
+            string currency;
+            if (order.PriceCurrency.IsNullOrEmpty())
+            {
+                CurrencyPairUtil.DecomposeCurrencyPair(symbol, out string baseCurrency, out string quoteCurrency);
+                currency = quoteCurrency;
+            }
+            else
+            {
+                currency = order.PriceCurrency;
+            }
 
             var orderFee = new OrderFee(new CashAmount(fill.Fee, currency));
 
