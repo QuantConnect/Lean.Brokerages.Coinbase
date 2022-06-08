@@ -28,7 +28,6 @@ using QuantConnect.Lean.Engine.DataFeeds;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
-    [TestFixture, Explicit("This test requires a configured and active account")]
     public class GDAXBrokerageIntegrationTests : BrokerageTests
     {
         #region Properties
