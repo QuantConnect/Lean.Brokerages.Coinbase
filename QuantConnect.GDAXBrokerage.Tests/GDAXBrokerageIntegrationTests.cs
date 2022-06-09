@@ -102,8 +102,8 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         // no stop limit support
         private static TestCaseData[] OrderParameters => new[]
         {
-            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("ETHBTC", SecurityType.Crypto, Market.GDAX))).SetName("MarketOrder"),
-            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("ETHBTC", SecurityType.Crypto, Market.GDAX), 1m, 0.0001m)).SetName("LimitOrder"),
+            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX))).SetName("MarketOrder"),
+            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX), 305m, 300m)).SetName("LimitOrder"),
         };
 
         [Test, TestCaseSource(nameof(OrderParameters))]
