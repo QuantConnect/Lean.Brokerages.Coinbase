@@ -136,13 +136,13 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             base.CloseFromShort(parameters);
         }
 
-        [Test, TestCaseSource(nameof(OrderParameters))]
+        [Explicit("Order modification not allowed")]
         public override void ShortFromLong(OrderTestParameters parameters)
         {
             base.ShortFromLong(parameters);
         }
 
-        [Test, TestCaseSource(nameof(OrderParameters))]
+        [Explicit("Order modification not allowed")]
         public override void LongFromShort(OrderTestParameters parameters)
         {
             base.LongFromShort(parameters);
