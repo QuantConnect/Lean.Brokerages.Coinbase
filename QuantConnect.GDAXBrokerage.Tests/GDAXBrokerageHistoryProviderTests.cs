@@ -35,7 +35,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         [Test, TestCaseSource(nameof(TestParameters))]
         public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool shouldBeEmpty)
         {
-            var restClient = new RestClient("https://api.pro.coinbase.com");
+            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
             var webSocketClient = new WebSocketClientWrapper();
             var aggregator = new AggregationManager();
 

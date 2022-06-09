@@ -129,7 +129,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         {
             var wssUrl = Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com");
             var webSocketClient = new WebSocketClientWrapper();
-            var restClient = new RestClient("https://api.pro.coinbase.com");
+            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
             var apiKey = Config.Get("gdax-api-key");
             var apiSecret = Config.Get("gdax-api-secret");
             var passPhrase = Config.Get("gdax-passphrase");
@@ -146,7 +146,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         {
             var wssUrl = Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com");
             var webSocketClient = new WebSocketClientWrapper();
-            var restClient = new RestClient("https://api.pro.coinbase.com");
+            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
             var apiKey = Config.Get("gdax-api-key");
             var apiSecret = Config.Get("gdax-api-secret");
             var passPhrase = Config.Get("gdax-passphrase");
