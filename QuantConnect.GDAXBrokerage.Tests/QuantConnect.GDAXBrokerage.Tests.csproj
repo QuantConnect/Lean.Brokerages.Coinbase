@@ -3,16 +3,16 @@
     <PropertyGroup>
         <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
         <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
 
         <IsPackable>false</IsPackable>
         <Copyright>Copyright ©  2021</Copyright>
         <TestProjectType>UnitTest</TestProjectType>
         <OutputPath>bin\$(Configuration)\</OutputPath>
-        <Product>QuantConnect.TemplateBrokerage.Tests</Product>
-        <AssemblyName>QuantConnect.TemplateBrokerage.Tests</AssemblyName>
-        <RootNamespace>QuantConnect.TemplateBrokerage.Tests</RootNamespace>
-        <AssemblyTitle>QuantConnect.TemplateBrokerage.Tests</AssemblyTitle>
+        <Product>QuantConnect.GDAXBrokerage.Tests</Product>
+        <AssemblyName>QuantConnect.GDAXBrokerage.Tests</AssemblyName>
+        <RootNamespace>QuantConnect.GDAXBrokerage.Tests</RootNamespace>
+        <AssemblyTitle>QuantConnect.GDAXBrokerage.Tests</AssemblyTitle>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
 
@@ -28,7 +28,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\Lean\Tests\QuantConnect.Tests.csproj" />
-      <ProjectReference Include="..\QuantConnect.TemplateBrokerage\QuantConnect.TemplateBrokerage.csproj" />
+      <ProjectReference Include="..\QuantConnect.GDAXBrokerage.ToolBox\QuantConnect.GDAXBrokerage.ToolBox.csproj" />
+      <ProjectReference Include="..\QuantConnect.GDAXBrokerage\QuantConnect.GDAXBrokerage.csproj" />
     </ItemGroup>
 
     <ItemGroup>
