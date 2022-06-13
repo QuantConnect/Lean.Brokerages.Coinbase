@@ -28,6 +28,7 @@ using QuantConnect.Lean.Engine.DataFeeds;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
+    [TestFixture]
     public class GDAXBrokerageIntegrationTests : BrokerageTests
     {
         #region Properties
