@@ -30,6 +30,7 @@ using RestSharp;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
+    [TestFixture]
     public class GDAXBrokerageHistoryProviderTests
     {
         [Test, TestCaseSource(nameof(TestParameters))]
