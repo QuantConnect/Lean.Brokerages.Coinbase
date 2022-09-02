@@ -22,6 +22,9 @@ This repository hosts the CoinbasePro Brokerage Plugin Integration with the Quan
 
 [Coinbase](https://www.coinbase.com/) was founded by Brian Armstrong and Fred Ehrsam in 2012 with the goal to "increase economic freedom in the world". Coinbase Pro provides access to trading Crypto for clients in over [100 countries](https://www.coinbase.com/places) with no minimum deposit. Coinbase Pro also provides a self-hosted Crypto wallet, a Visa debit rewards card, and Bitcoin collateral-backed lines of credit.
 
+For more information about the Coinbase Pro brokerage, see the [QuantConnect-Coinbase Pro Integration Page](https://www.quantconnect.com/docs/v2/our-platform/live-trading/brokerages/coinbase-pro).
+
+
 ## Using the Brokerage Plugin
   
 ### Deploying Coinbase Pro with VSCode User Interace
@@ -35,7 +38,7 @@ This repository hosts the CoinbasePro Brokerage Plugin Integration with the Quan
 Follow these steps to start local live trading with the Coinbase Pro brokerage:
 
 1.  Open a terminal in your [CLI root directory](https://www.quantconnect.com/docs/v2/lean-cli/initialization/directory-structure#02-lean-init).
-2.  Run lean live "`<projectName>`" to start a live deployment wizard for the project in ./`<projectName>` and then enter the brokerage number.
+2.  Run `lean live "<projectName>`" to start a live deployment wizard for the project in ./`<projectName>` and then enter the brokerage number.
 
     ```
     $ lean live 'My Project'
@@ -118,9 +121,9 @@ Follow these steps to start local live trading with the Coinbase Pro brokerage:
 
 If you select Polygon Data Feed, see [Polygon](https://www.quantconnect.com/docs/v2/lean-cli/live-trading/other-data-feeds/polygon) for set up instructions.
 
-1. View the result in the `<projectName>`/live/`<timestamp>` directory. Results are stored in real-time in JSON format. You can save results to a different directory by providing the --output `<path>` option in step 2.
+1. View the result in the `<projectName>live<timestamp>` directory. Results are stored in real-time in JSON format. You can save results to a different directory by providing the `--output <path>` option in step 2.
 
-If you already have a live environment configured in your [Lean configuration file](https://www.quantconnect.com/docs/v2/lean-cli/initialization/configuration#03-Lean-Configuration), you can skip the interactive wizard by providing the --environment `<value>` option in step 2. The value of this option must be the name of an environment which has live-mode set to true.
+If you already have a live environment configured in your [Lean configuration file](https://www.quantconnect.com/docs/v2/lean-cli/initialization/configuration#03-Lean-Configuration), you can skip the interactive wizard by providing the `--environment <value>` option in step 2. The value of this option must be the name of an environment which has `live-mode` set to true.
 
 ## Account Types
 
