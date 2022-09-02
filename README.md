@@ -14,9 +14,8 @@ This repository hosts the CoinbasePro Brokerage Plugin Integration with the Quan
 
 <p align="center">
 <picture >
-  <source media="(prefers-color-scheme: dark)" srcset="https://user-images.githubusercontent.com/">
-  <source media="(prefers-color-scheme: light)" srcset="https://user-images.githubusercontent.com/">
-  <img alt="introduction" width="40%">
+ <source srcset="https://user-images.githubusercontent.com/79997186/188237467-b952a56a-c97c-4b55-b36c-290b560c61f1.png">
+ <img alt="coinbase" width="30%">
 </picture>
 <p>
 
