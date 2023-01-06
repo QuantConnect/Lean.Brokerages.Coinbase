@@ -177,16 +177,17 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var actualFee = 0m;
             var actualQuantity = 0m;
 
-            _unit.OrderStatusChanged += (s, e) =>
+            _unit.OrdersStatusChanged += (s, e) =>
             {
-                Assert.AreEqual("BTCUSD", e.Symbol.Value);
-                actualFee += e.OrderFee.Value.Amount;
-                Assert.AreEqual(Currencies.USD, e.OrderFee.Value.Currency);
-                actualQuantity += e.AbsoluteFillQuantity;
+                var orderEvent = e.Single();
+                Assert.AreEqual("BTCUSD", orderEvent.Symbol.Value);
+                actualFee += orderEvent.OrderFee.Value.Amount;
+                Assert.AreEqual(Currencies.USD, orderEvent.OrderFee.Value.Currency);
+                actualQuantity += orderEvent.AbsoluteFillQuantity;
 
                 Assert.IsTrue(actualQuantity != orderQuantity);
-                Assert.AreEqual(OrderStatus.PartiallyFilled, e.Status);
-                Assert.AreEqual(5.23512, e.FillQuantity);
+                Assert.AreEqual(OrderStatus.PartiallyFilled, orderEvent.Status);
+                Assert.AreEqual(5.23512, orderEvent.FillQuantity);
                 Assert.AreEqual(12, actualFee);
 
                 isFilled = true;
@@ -229,13 +230,14 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             };
             SetupResponse(JsonConvert.SerializeObject(response), httpStatus);
 
-            _unit.OrderStatusChanged += (s, e) =>
+            _unit.OrdersStatusChanged += (s, e) =>
             {
-                Assert.AreEqual(status, e.Status);
+                var orderEvent = e.Single();
+                Assert.AreEqual(status, orderEvent.Status);
                 if (orderId != null)
                 {
-                    Assert.AreEqual("BTCUSD", e.Symbol.Value);
-                    Assert.That((quantity > 0 && e.Direction == OrderDirection.Buy) || (quantity < 0 && e.Direction == OrderDirection.Sell));
+                    Assert.AreEqual("BTCUSD", orderEvent.Symbol.Value);
+                    Assert.That((quantity > 0 && orderEvent.Direction == OrderDirection.Buy) || (quantity < 0 && orderEvent.Direction == OrderDirection.Sell));
                     Assert.IsTrue(orderId == null || _unit.CachedOrderIDs.SelectMany(c => c.Value.BrokerId.Where(b => b == BrokerId)).Any());
                 }
             };
