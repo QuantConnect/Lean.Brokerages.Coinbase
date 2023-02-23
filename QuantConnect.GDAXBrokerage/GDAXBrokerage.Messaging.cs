@@ -52,6 +52,7 @@ namespace QuantConnect.Brokerages.GDAX
         private readonly SymbolPropertiesDatabaseSymbolMapper _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
         private bool _isDataQueueHandler;
         private LiveNodePacket _job;
+        private RateGate _websocketRateLimit = new(7, TimeSpan.FromSeconds(1));
 
         /// <summary>
         /// Data Aggregator
@@ -505,6 +506,8 @@ namespace QuantConnect.Brokerages.GDAX
                 signature = token.Signature,
             });
 
+            _websocketRateLimit.WaitToProceed();
+
             WebSocket.Send(json);
 
             Log.Trace("GDAXBrokerage.Subscribe: Sent subscribe.");
@@ -580,6 +583,8 @@ namespace QuantConnect.Brokerages.GDAX
                     channels = ChannelNames,
                     product_ids = products
                 };
+
+                _websocketRateLimit.WaitToProceed();
 
                 WebSocket.Send(JsonConvert.SerializeObject(payload));
             }

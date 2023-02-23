@@ -501,6 +501,8 @@ namespace QuantConnect.Brokerages.GDAX
 
             _publicEndpointRateLimiter.Dispose();
             _privateEndpointRateLimiter.Dispose();
+
+            _websocketRateLimit.DisposeSafely();
         }
 
         private class ModulesReadLicenseRead : Api.RestResponse
