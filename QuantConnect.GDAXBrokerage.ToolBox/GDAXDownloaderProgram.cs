@@ -32,13 +32,6 @@ namespace QuantConnect.ToolBox.GDAXDownloader
         {
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
-            if (resolution.IsNullOrEmpty() || tickers.IsNullOrEmpty())
-            {
-                Console.WriteLine("GDAXDownloader ERROR: '--tickers=' or '--resolution=' parameter is missing");
-                Console.WriteLine("--tickers=ETHUSD,ETHBTC,BTCUSD,etc.");
-                Console.WriteLine("--resolution=Second/Minute/Hour/Daily");
-                Environment.Exit(1);
-            }
             var castResolution = (Resolution) Enum.Parse(typeof(Resolution), resolution);
             try
             {
@@ -50,6 +43,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
                 var downloader = new GDAXDownloader();
                 foreach (var ticker in tickers)
                 {
+                    Log.Trace("Start data download for " + ticker);
                     // Download the data
                     var symbolObject = Symbol.Create(ticker, SecurityType.Crypto, market);
                     var data = downloader.Get(new DataDownloaderGetParameters(symbolObject, castResolution, fromDate, toDate));
@@ -61,7 +55,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
                     writer.Write(distinctData);
                 }
 
-                Log.Trace("Finish data download. Press any key to continue..");
+                Log.Trace("Finish data download");
 
             }
             catch (Exception err)
@@ -70,7 +64,6 @@ namespace QuantConnect.ToolBox.GDAXDownloader
                 Log.Trace(err.Message);
                 Log.Trace(err.StackTrace);
             }
-            Console.ReadLine();
         }
 
         /// <summary>
