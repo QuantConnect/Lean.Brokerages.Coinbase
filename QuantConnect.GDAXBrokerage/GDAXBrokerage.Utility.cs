@@ -13,11 +13,12 @@
  * limitations under the License.
 */
 
-using RestSharp;
 using System;
-using System.Linq;
-using System.Security.Cryptography;
+using RestSharp;
 using System.Text;
+using System.Linq;
+using System.Globalization;
+using System.Security.Cryptography;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -38,10 +39,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// Timestamp Header
         /// </summary>
         public const string TimeHeader = "CB-ACCESS-TIMESTAMP";
-        /// <summary>
-        /// Passphrase header
-        /// </summary>
-        public const string PassHeader = "CB-ACCESS-PASSPHRASE";
         private const string Open = "open";
         private const string Pending = "pending";
         private const string Active = "active";
@@ -70,13 +67,11 @@ namespace QuantConnect.Brokerages.GDAX
                 url = request.Resource;
             }
 
-
             var token = GetAuthenticationToken(body?.Value.ToString() ?? string.Empty, request.Method.ToString().ToUpperInvariant(), url);
 
-            request.AddHeader(SignHeader, token.Signature);
             request.AddHeader(KeyHeader, ApiKey);
+            request.AddHeader(SignHeader, token.Signature);
             request.AddHeader(TimeHeader, token.Timestamp);
-            request.AddHeader(PassHeader, _passPhrase);
 
             return token;
         }
@@ -93,22 +88,36 @@ namespace QuantConnect.Brokerages.GDAX
             var token = new AuthenticationToken
             {
                 Key = ApiKey,
-                Passphrase = _passPhrase,
                 //todo: query time server to correct for time skew
-                Timestamp = Time.DateTimeToUnixTimeStamp(DateTime.UtcNow).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                Timestamp = Time.DateTimeToUnixTimeStamp(DateTime.UtcNow).ToString("F0", CultureInfo.InvariantCulture)
             };
 
-            byte[] data = Convert.FromBase64String(ApiSecret);
             var prehash = token.Timestamp + method + url + body;
 
-            byte[] bytes = Encoding.UTF8.GetBytes(prehash);
-            using (var hmac = new HMACSHA256(data))
+            var hmacKey = Encoding.UTF8.GetBytes(ApiSecret);
+            var dataBytes = Encoding.UTF8.GetBytes(prehash);
+
+            using (var hmac = new HMACSHA256(hmacKey))
             {
-                byte[] hash = hmac.ComputeHash(bytes);
-                token.Signature = Convert.ToBase64String(hash);
+                var sig = hmac.ComputeHash(dataBytes);
+                token.Signature = ByteToHexString(sig);
             }
 
             return token;
+        }
+
+        private static string ByteToHexString(byte[] bytes)
+        {
+            char[] c = new char[bytes.Length * 2];
+            int b;
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                b = bytes[i] >> 4;
+                c[i * 2] = (char)(87 + b + (((b - 10) >> 31) & -39));
+                b = bytes[i] & 0xF;
+                c[i * 2 + 1] = (char)(87 + b + (((b - 10) >> 31) & -39));
+            }
+            return new string(c);
         }
 
         private static string ConvertOrderType(Orders.OrderType orderType)

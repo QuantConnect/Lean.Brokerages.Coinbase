@@ -82,7 +82,6 @@ namespace QuantConnect.Brokerages.GDAX.Messages
         public IList<string> ProductIds { get; set; }
         public string Signature { get; set; }
         public string Key { get; set; }
-        public string Passphrase { get; set; }
         public string Timestamp { get; set; }
     }
 

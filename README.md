@@ -82,14 +82,13 @@ Follow these steps to start local live trading with the Coinbase Pro brokerage:
     Use sandbox? (live, paper): live
     ```
 
-5.  Enter your API key, API secret, and passphrase.
+5.  Enter your API key, API secret.
 
     ``` 
     $ lean live "My Project"
 
     API key: 6d3ef5ca2d2fa52e4ee55624b0471261
     API secret: ****************************************************************************************
-    Passphrase: ****************
     ```
 
     To create new API credentials, see the [API settings page](https://pro.coinbase.com/profile/api) on the Coinbase Pro website.

@@ -31,9 +31,5 @@ namespace QuantConnect.Brokerages.GDAX
         /// The timestamp
         /// </summary>
         public string Timestamp { get; set; }
-        /// <summary>
-        /// The pass phrase
-        /// </summary>
-        public string Passphrase { get; set; }
     }
 }

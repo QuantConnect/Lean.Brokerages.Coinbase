@@ -10,7 +10,6 @@ jobs:
     env:
         QC_GDAX_API_SECRET: ${{ secrets.QC_GDAX_API_SECRET }}
         QC_GDAX_API_KEY: ${{ secrets.QC_GDAX_API_KEY }}
-        QC_GDAX_PASSPHRASE: ${{ secrets.QC_GDAX_PASSPHRASE }}
         QC_GDAX_URL: ${{ secrets.QC_GDAX_URL }}
         QC_GDAX_REST_API: ${{ secrets.QC_GDAX_REST_API }}
         QC_JOB_USER_ID: ${{ secrets.JOB_USER_ID }}
