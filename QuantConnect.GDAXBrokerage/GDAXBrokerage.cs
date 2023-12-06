@@ -1,6 +1,6 @@
 /*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
- * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
+ * Lean Algorithmic Trading Engine v2.0. Copyright 2023 QuantConnect Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ using QuantConnect.Api;
 using QuantConnect.Configuration;
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
+using QuantConnect.GDAX.Models;
 using QuantConnect.Logging;
 using QuantConnect.Orders;
 using QuantConnect.Orders.Fees;
@@ -41,14 +42,6 @@ namespace QuantConnect.Brokerages.GDAX
     public partial class GDAXBrokerage : BaseWebsocketsBrokerage
     {
         private const int MaxDataPointsPerHistoricalRequest = 300;
-
-        // These are the only currencies accepted for fiat deposits
-        private static readonly HashSet<string> FiatCurrencies = new List<string>
-        {
-            Currencies.EUR,
-            Currencies.GBP,
-            Currencies.USD
-        }.ToHashSet();
 
         #region IBrokerage
         /// <summary>
@@ -207,8 +200,6 @@ namespace QuantConnect.Brokerages.GDAX
         public override void Connect()
         {
             base.Connect();
-
-            AccountBaseCurrency = GetAccountBaseCurrency();
         }
 
         /// <summary>
@@ -231,7 +222,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var list = new List<Order>();
 
-            var req = new RestRequest("/orders?status=open&status=pending&status=active", Method.GET);
+            var req = new RestRequest("/api/v3/brokerage/orders/historical/batch?order_status=OPEN", Method.GET);
             GetAuthenticationToken(req);
             var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
 
@@ -240,54 +231,56 @@ namespace QuantConnect.Brokerages.GDAX
                 throw new Exception($"GDAXBrokerage.GetOpenOrders: request failed: [{(int) response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
             }
 
-            var orders = JsonConvert.DeserializeObject<Messages.Order[]>(response.Content);
-            foreach (var item in orders)
+            var orders = JsonConvert.DeserializeObject<CoinbaseOrderResponse>(response.Content);
+            foreach (var order in orders.Orders)
             {
-                Order order;
+                Order leanOrder;
 
-                var quantity = item.Side == "sell" ? -item.Size : item.Size;
-                var symbol = _symbolMapper.GetLeanSymbol(item.ProductId, SecurityType.Crypto, Market.GDAX);
-                var time = DateTime.UtcNow;
+                var symbol = _symbolMapper.GetLeanSymbol(order.ProductId, SecurityType.Crypto, Market.GDAX);
 
-                if (item.Type == "market")
+                if (order.OrderConfiguration.MarketIoc != null)
                 {
-                    order = new MarketOrder(symbol, quantity, time, item.Price);
+                    var quantity = order.Side == "BUY" ?
+                        order.OrderConfiguration.MarketIoc.QuoteSize : -order.OrderConfiguration.MarketIoc.BaseSize;
+                    leanOrder = new MarketOrder(symbol, quantity, order.CreatedTime, order.AverageFilledPrice);
                 }
-                else if (!string.IsNullOrEmpty(item.Stop))
+                //else if (!string.IsNullOrEmpty(order.Stop))
+                //{
+                //    leanOrder = new StopLimitOrder(symbol, quantity, order.StopPrice, order.Price, order.CreatedTime);
+                //}
+                else if (order.OrderConfiguration.LimitGtc != null)
                 {
-                    order = new StopLimitOrder(symbol, quantity, item.StopPrice, item.Price, time);
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtc.BaseSize : -order.OrderConfiguration.LimitGtc.BaseSize;
+                    leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtc.LimitPrice, order.CreatedTime);
                 }
-                else if (item.Type == "limit")
-                {
-                    order = new LimitOrder(symbol, quantity, item.Price, time);
-                }
-                else if (item.Type == "stop")
-                {
-                    order = new StopMarketOrder(symbol, quantity, item.Price, time);
-                }
+                //else if (order.Type == "stop")
+                //{
+                //    leanOrder = new StopMarketOrder(symbol, quantity, order.Price, order.CreatedTime);
+                //}
                 else
                 {
                     OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, (int)response.StatusCode,
-                        "GDAXBrokerage.GetOpenOrders: Unsupported order type returned from brokerage: " + item.Type));
+                        "GDAXBrokerage.GetOpenOrders: Unsupported order type returned from brokerage: " + order.OrderType));
                     continue;
                 }
 
-                order.Status = ConvertOrderStatus(item);
-                order.BrokerId.Add(item.Id);
-                list.Add(order);
+                leanOrder.Status = ConvertOrderStatus(order);
+                leanOrder.BrokerId.Add(order.OrderId);
+
+                list.Add(leanOrder);
             }
 
-            foreach (var item in list)
-            {
-                if (item.Status.IsOpen())
-                {
-                    var cached = CachedOrderIDs.Where(c => c.Value.BrokerId.Contains(item.BrokerId.First()));
-                    if (cached.Any())
-                    {
-                        CachedOrderIDs[cached.First().Key] = item;
-                    }
-                }
-            }
+            //foreach (var item in list)
+            //{
+            //    if (item.Status.IsOpen())
+            //    {
+            //        var cached = CachedOrderIDs.Where(c => c.Value.BrokerId.Contains(item.BrokerId.First()));
+            //        if (cached.Any())
+            //        {
+            //            CachedOrderIDs[cached.First().Key] = item;
+            //        }
+            //    }
+            //}
 
             return list;
         }
@@ -313,7 +306,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var list = new List<CashAmount>();
 
-            var request = new RestRequest("/accounts", Method.GET);
+            var request = new RestRequest("/api/v3/brokerage/accounts", Method.GET);
             GetAuthenticationToken(request);
             var response = ExecuteRestRequest(request, GdaxEndpointType.Private);
 
@@ -322,11 +315,11 @@ namespace QuantConnect.Brokerages.GDAX
                 throw new Exception($"GDAXBrokerage.GetCashBalance: request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
             }
 
-            foreach (var item in JsonConvert.DeserializeObject<Messages.Account[]>(response.Content))
+            foreach (var item in JsonConvert.DeserializeObject<CoinbaseAccountResponse>(response.Content).Accounts)
             {
-                if (item.Balance > 0)
+                if(item.AvailableBalance.Value > 0m)
                 {
-                    list.Add(new CashAmount(item.Balance, item.Currency.ToUpperInvariant()));
+                    list.Add(new CashAmount(item.AvailableBalance.Value, item.AvailableBalance.Currency));
                 }
             }
 
@@ -464,29 +457,6 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         #endregion
-
-        /// <summary>
-        /// Gets the account base currency
-        /// </summary>
-        private string GetAccountBaseCurrency()
-        {
-            var req = new RestRequest("/accounts", Method.GET);
-            GetAuthenticationToken(req);
-            var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
-
-            if (response.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"GDAXBrokerage.GetAccountBaseCurrency(): request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
-            }
-
-            var result = JsonConvert.DeserializeObject<Messages.Account[]>(response.Content)
-                .Where(account => FiatCurrencies.Contains(account.Currency))
-                // we choose the first fiat currency which has the largest available quantity
-                .OrderByDescending(account => account.Available).ThenBy(account => account.Currency)
-                .FirstOrDefault()?.Currency;
-
-            return result ?? Currencies.USD;
-        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

@@ -47,7 +47,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
         protected override IBrokerage CreateBrokerage(IOrderProvider orderProvider, ISecurityProvider securityProvider)
         {
-            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
+            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.coinbase.com"));
             var webSocketClient = new WebSocketClientWrapper();
 
             var securities = new SecurityManager(new TimeKeeper(DateTime.UtcNow, TimeZones.NewYork))

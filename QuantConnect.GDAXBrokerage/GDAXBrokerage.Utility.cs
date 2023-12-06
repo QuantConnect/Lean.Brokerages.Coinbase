@@ -19,6 +19,7 @@ using System.Text;
 using System.Linq;
 using System.Globalization;
 using System.Security.Cryptography;
+using QuantConnect.GDAX.Models;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -54,18 +55,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var body = request.Parameters.SingleOrDefault(b => b.Type == ParameterType.RequestBody);
 
-            string url;
-            if (request.Method == Method.GET && request.Parameters.Count > 0)
-            {
-                var parameters = request.Parameters.Count > 0
-                    ? string.Join("&", request.Parameters.Select(x => $"{x.Name}={x.Value}"))
-                    : string.Empty;
-                url = $"{request.Resource}?{parameters}";
-            }
-            else
-            {
-                url = request.Resource;
-            }
+            var url = RestClient.BuildUri(request).AbsolutePath;
 
             var token = GetAuthenticationToken(body?.Value.ToString() ?? string.Empty, request.Method.ToString().ToUpperInvariant(), url);
 
@@ -138,9 +128,9 @@ namespace QuantConnect.Brokerages.GDAX
             throw new NotSupportedException($"GDAXBrokerage.ConvertOrderType: Unsupported order type:{orderType.ToStringInvariant()}");
         }
 
-        private static Orders.OrderStatus ConvertOrderStatus(Messages.Order order)
+        private static Orders.OrderStatus ConvertOrderStatus(CoinbaseOrder order)
         {
-            if (order.FilledSize != 0 && order.FilledSize != order.Size)
+            if (order.CompletionPercentage > 0 && order.CompletionPercentage != 100)
             {
                 return Orders.OrderStatus.PartiallyFilled;
             }
