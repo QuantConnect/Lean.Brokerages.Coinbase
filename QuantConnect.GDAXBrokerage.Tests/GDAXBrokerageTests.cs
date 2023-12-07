@@ -62,6 +62,10 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var priceProvider = new Mock<IPriceProvider>();
             priceProvider.Setup(x => x.GetLastPrice(It.IsAny<Symbol>())).Returns(1.234m);
 
+            _rest.Setup(e => e.BuildUri(It.IsAny<IRestRequest>()))
+                .Returns((IRestRequest request) => new Uri("http://localhost"))
+                .Verifiable();
+
             _rest.Setup(m => m.Execute(It.Is<IRestRequest>(r => r.Resource.StartsWith("/products/"))))
                 .Returns(new RestResponse
                 {
