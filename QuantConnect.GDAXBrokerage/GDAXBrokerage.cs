@@ -241,22 +241,29 @@ namespace QuantConnect.Brokerages.GDAX
                 if (order.OrderConfiguration.MarketIoc != null)
                 {
                     var quantity = order.Side == "BUY" ?
-                        order.OrderConfiguration.MarketIoc.QuoteSize : -order.OrderConfiguration.MarketIoc.BaseSize;
+                        order.OrderConfiguration.MarketIoc.QuoteSize : Decimal.Negate(order.OrderConfiguration.MarketIoc.BaseSize);
                     leanOrder = new MarketOrder(symbol, quantity, order.CreatedTime, order.AverageFilledPrice);
                 }
-                //else if (!string.IsNullOrEmpty(order.Stop))
-                //{
-                //    leanOrder = new StopLimitOrder(symbol, quantity, order.StopPrice, order.Price, order.CreatedTime);
-                //}
                 else if (order.OrderConfiguration.LimitGtc != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtc.BaseSize : -order.OrderConfiguration.LimitGtc.BaseSize;
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtc.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtc.LimitPrice, order.CreatedTime);
                 }
-                //else if (order.Type == "stop")
-                //{
-                //    leanOrder = new StopMarketOrder(symbol, quantity, order.Price, order.CreatedTime);
-                //}
+                else if (order.OrderConfiguration.LimitGtd != null)
+                {
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
+                    leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtd.LimitPrice, order.CreatedTime);
+                }
+                else if (order.OrderConfiguration.StopLimitGtc != null)
+                {
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);
+                    leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtc.StopPrice, order.OrderConfiguration.StopLimitGtc.LimitPrice, order.CreatedTime);
+                }
+                else if (order.OrderConfiguration.StopLimitGtd != null)
+                {
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
+                    leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtd.StopPrice, order.OrderConfiguration.StopLimitGtd.LimitPrice, order.CreatedTime);
+                }
                 else
                 {
                     OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, (int)response.StatusCode,
@@ -270,17 +277,18 @@ namespace QuantConnect.Brokerages.GDAX
                 list.Add(leanOrder);
             }
 
-            //foreach (var item in list)
-            //{
-            //    if (item.Status.IsOpen())
-            //    {
-            //        var cached = CachedOrderIDs.Where(c => c.Value.BrokerId.Contains(item.BrokerId.First()));
-            //        if (cached.Any())
-            //        {
-            //            CachedOrderIDs[cached.First().Key] = item;
-            //        }
-            //    }
-            //}
+            // TODO: Why did we use this ?
+            foreach (var item in list)
+            {
+                if (item.Status.IsOpen())
+                {
+                    var cached = CachedOrderIDs.Where(c => c.Value.BrokerId.Contains(item.BrokerId.First()));
+                    if (cached.Any())
+                    {
+                        CachedOrderIDs[cached.First().Key] = item;
+                    }
+                }
+            }
 
             return list;
         }

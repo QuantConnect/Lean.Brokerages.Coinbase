@@ -40,7 +40,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// Timestamp Header
         /// </summary>
         public const string TimeHeader = "CB-ACCESS-TIMESTAMP";
-        private const string Open = "open";
+        private const string Open = "OPEN";
         private const string Pending = "pending";
         private const string Active = "active";
         private const string Done = "done";
