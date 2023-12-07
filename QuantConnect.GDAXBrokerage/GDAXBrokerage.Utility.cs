@@ -90,24 +90,10 @@ namespace QuantConnect.Brokerages.GDAX
             using (var hmac = new HMACSHA256(hmacKey))
             {
                 var sig = hmac.ComputeHash(dataBytes);
-                token.Signature = ByteToHexString(sig);
+                token.Signature = Convert.ToHexString(sig).ToLower();
             }
 
             return token;
-        }
-
-        private static string ByteToHexString(byte[] bytes)
-        {
-            char[] c = new char[bytes.Length * 2];
-            int b;
-            for (int i = 0; i < bytes.Length; i++)
-            {
-                b = bytes[i] >> 4;
-                c[i * 2] = (char)(87 + b + (((b - 10) >> 31) & -39));
-                b = bytes[i] & 0xF;
-                c[i * 2 + 1] = (char)(87 + b + (((b - 10) >> 31) & -39));
-            }
-            return new string(c);
         }
 
         private static string ConvertOrderType(Orders.OrderType orderType)
