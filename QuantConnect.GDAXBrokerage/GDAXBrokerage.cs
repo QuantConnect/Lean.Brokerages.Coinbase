@@ -171,27 +171,37 @@ namespace QuantConnect.Brokerages.GDAX
         /// <returns></returns>
         public override bool CancelOrder(Order order)
         {
-            var success = new List<bool>();
+            var req = new RestRequest("/api/v3/brokerage/orders/batch_cancel", Method.POST);
 
-            foreach (var id in order.BrokerId)
+            req.AddJsonBody(JsonConvert.SerializeObject(new { order_ids = order.BrokerId }));
+
+            GetAuthenticationToken(req);
+
+            var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
+
+            if(response.StatusCode != HttpStatusCode.OK)
             {
-                var req = new RestRequest("/orders/" + id, Method.DELETE);
-                GetAuthenticationToken(req);
-                var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
-                success.Add(response.StatusCode == HttpStatusCode.OK);
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    OnOrderEvent(new OrderEvent(order,
-                        DateTime.UtcNow,
-                        OrderFee.Zero,
-                        "GDAX Order Event") { Status = OrderStatus.Canceled });
-
-                    PendingOrder orderRemoved;
-                    _pendingOrders.TryRemove(id, out orderRemoved);
-                }
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "CancelOrder",
+                    $"Coinbase has not canceled order, error: {response.Content}"));
+                return false;
             }
 
-            return success.All(a => a);
+            var cancelOrder = JsonConvert.DeserializeObject<CoinbaseCancelOrders>(response.Content).Result.First();
+
+            if(!cancelOrder.Success)
+            {
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "CancelOrder",
+                    $"Coinbase has not canceled order, error: {cancelOrder.FailureReason}"));
+                return false;
+            }
+
+            // TODO: Why did we use this ?
+            _pendingOrders.TryRemove(cancelOrder.OrderId, out _);
+
+            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "Coinbase Order Event")
+            { Status = OrderStatus.Canceled });
+
+            return true;
         }
 
         /// <summary>
