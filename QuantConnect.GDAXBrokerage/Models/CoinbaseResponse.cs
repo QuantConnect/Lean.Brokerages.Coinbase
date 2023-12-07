@@ -23,19 +23,14 @@ namespace QuantConnect.GDAX.Models;
 public class CoinbaseResponse
 {
     /// <summary>
-    /// 
-    /// </summary>
-    [JsonProperty("sequence")]
-    public string Sequence { get; set; }
-
-    /// <summary>
-    /// 
+    /// Whether there are additional pages for this query.
     /// </summary>
     [JsonProperty("has_next")]
     public bool HasNext { get; set; }
 
     /// <summary>
-    /// 
+    /// Cursor for paginating. Users can use this string to pass in the next call to this endpoint, 
+    /// and repeat this process to fetch all accounts through pagination.
     /// </summary>
     [JsonProperty("cursor")]
     public string Cursor { get; set; }
