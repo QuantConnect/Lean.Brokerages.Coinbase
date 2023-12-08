@@ -40,9 +40,9 @@ namespace QuantConnect.Brokerages.GDAX
         /// <summary>
         /// Initializes a new instance of the <see cref="GDAXDataQueueHandler"/> class
         /// </summary>
-        public GDAXDataQueueHandler(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret, IAlgorithm algorithm,
-            IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
-            : base(wssUrl, websocket, restClient, apiKey, apiSecret, algorithm, priceProvider, aggregator, job)
+        public GDAXDataQueueHandler(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
+            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+            : base(wssUrl, websocket, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, job)
         {
             Initialize(
                 wssUrl: wssUrl,
@@ -50,6 +50,7 @@ namespace QuantConnect.Brokerages.GDAX
                 restClient: restClient,
                 apiKey: apiKey,
                 apiSecret: apiSecret,
+                restApiUrl: restApiUrl,
                 algorithm: algorithm,
                 priceProvider: priceProvider,
                 aggregator: aggregator,
@@ -93,6 +94,7 @@ namespace QuantConnect.Brokerages.GDAX
             var webSocketClient = new WebSocketClientWrapper();
             var apiKey = job.BrokerageData["gdax-api-key"];
             var apiSecret = job.BrokerageData["gdax-api-secret"];
+            var restApiUrl = job.BrokerageData["coinbase-api-url"];
             var priceProvider = new ApiPriceProvider(job.UserId, job.UserToken);
             var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
                 Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
@@ -103,6 +105,7 @@ namespace QuantConnect.Brokerages.GDAX
                 restClient: restClient,
                 apiKey: apiKey,
                 apiSecret: apiSecret,
+                restApiUrl: restApiUrl,
                 algorithm: null,
                 priceProvider: priceProvider,
                 aggregator: aggregator,

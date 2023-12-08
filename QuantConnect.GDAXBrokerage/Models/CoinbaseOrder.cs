@@ -15,6 +15,7 @@
 
 using System;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 using Newtonsoft.Json.Converters;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
@@ -29,7 +30,7 @@ public class CoinbaseOrderResponse : CoinbaseResponse
     /// A list of orders matching the query.
     /// </summary>
     [JsonProperty("orders")]
-    public CoinbaseOrder[] Orders { get; set; }
+    public IEnumerable<CoinbaseOrder> Orders { get; set; }
 
     /// <summary>
     /// The sequence of the db at which this state was read.
@@ -80,10 +81,11 @@ public readonly struct CoinbaseOrder
     public string ClientOrderId { get; }
 
     /// <summary>
-    /// Possible values: [OPEN, FILLED, CANCELLED, EXPIRED, FAILED, UNKNOWN_ORDER_STATUS]
+    /// Order Status
     /// </summary>
     [JsonProperty("status")]
-    public string Status { get; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public OrderStatus Status { get; }
 
     /// <summary>
     /// Time in Force policies
@@ -251,7 +253,7 @@ public readonly struct CoinbaseOrder
 
     [JsonConstructor]
     public CoinbaseOrder(string orderId, string productId, string userId, OrderConfiguration orderConfiguration,
-        string side, string clientOrderId, string status, TimeInForce timeInForce, DateTime createdTime, decimal completionPercentage,
+        string side, string clientOrderId, OrderStatus status, TimeInForce timeInForce, DateTime createdTime, decimal completionPercentage,
         decimal filledSize, decimal averageFilledPrice, string fee, decimal numberOfFills, decimal filledValue, bool pendingCancel,
         bool sizeInQuote, decimal totalFees, bool sizeInclusiveOfFees, decimal totalValueAfterFees, string triggerStatus,
         string orderType, string rejectReason, bool settled, string productType, string rejectMessage, string cancelMessage,

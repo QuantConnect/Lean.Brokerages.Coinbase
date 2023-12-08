@@ -172,24 +172,9 @@ namespace QuantConnect.Brokerages.GDAX
         /// <returns></returns>
         public override bool CancelOrder(Order order)
         {
-            var req = new RestRequest("/api/v3/brokerage/orders/batch_cancel", Method.POST);
+            var cancelOrder = _coinbaseApi.CancelOrders(order.BrokerId);
 
-            req.AddJsonBody(JsonConvert.SerializeObject(new { order_ids = order.BrokerId }));
-
-            GetAuthenticationToken(req);
-
-            var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
-
-            if(response.StatusCode != HttpStatusCode.OK)
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "CancelOrder",
-                    $"Coinbase has not canceled order, error: {response.Content}"));
-                return false;
-            }
-
-            var cancelOrder = JsonConvert.DeserializeObject<CoinbaseCancelOrders>(response.Content).Result.First();
-
-            if(!cancelOrder.Success)
+            if (!cancelOrder.Success)
             {
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "CancelOrder",
                     $"Coinbase has not canceled order, error: {cancelOrder.FailureReason}"));
@@ -233,19 +218,11 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var list = new List<Order>();
 
-            var req = new RestRequest("/api/v3/brokerage/orders/historical/batch?order_status=OPEN", Method.GET);
-            GetAuthenticationToken(req);
-            var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
+            var openOrders = _coinbaseApi.GetListOrders(BrokerageEnums.OrderStatus.OPEN);
 
-            if (response.StatusCode != HttpStatusCode.OK)
+            foreach (var order in openOrders)
             {
-                throw new Exception($"GDAXBrokerage.GetOpenOrders: request failed: [{(int) response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
-            }
-
-            var orders = JsonConvert.DeserializeObject<CoinbaseOrderResponse>(response.Content);
-            foreach (var order in orders.Orders)
-            {
-                Order leanOrder;
+                Order leanOrder = default;
 
                 var symbol = _symbolMapper.GetLeanSymbol(order.ProductId, SecurityType.Crypto, Market.GDAX);
 
@@ -276,12 +253,6 @@ namespace QuantConnect.Brokerages.GDAX
                     var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtd.StopPrice, order.OrderConfiguration.StopLimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.StopLimitGtd.EndTime);
-                }
-                else
-                {
-                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, (int)response.StatusCode,
-                        "GDAXBrokerage.GetOpenOrders: Unsupported order type returned from brokerage: " + order.OrderType));
-                    continue;
                 }
 
                 leanOrder.Status = ConvertOrderStatus(order);

@@ -14,6 +14,7 @@
 */
 
 using Newtonsoft.Json;
+using QuantConnect.CoinbaseBrokerage.Api;
 using QuantConnect.Configuration;
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
@@ -38,7 +39,7 @@ namespace QuantConnect.Brokerages.GDAX
 {
     public partial class GDAXBrokerage
     {
-        #region Declarations
+        private CoinbaseApi _coinbaseApi;
 
         /// <summary>
         /// Collection of partial split messages
@@ -73,8 +74,6 @@ namespace QuantConnect.Brokerages.GDAX
         private readonly int _fillMonitorTimeout = Config.GetInt("gdax-fill-monitor-timeout", 500);
         private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new ConcurrentDictionary<string, PendingOrder>();
 
-        #endregion Declarations
-
         /// <summary>
         /// The list of websocket channels to subscribe
         /// </summary>
@@ -100,8 +99,8 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
         /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public GDAXBrokerage(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret, IAlgorithm algorithm,
-            IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+        public GDAXBrokerage(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
+            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
             : base("GDAX")
         {
             Initialize(
@@ -110,6 +109,7 @@ namespace QuantConnect.Brokerages.GDAX
                 restClient: restClient,
                 apiKey: apiKey,
                 apiSecret: apiSecret,
+                restApiUrl: restApiUrl,
                 algorithm: algorithm,
                 priceProvider: priceProvider,
                 aggregator: aggregator,
@@ -190,13 +190,13 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
         protected void Initialize(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
-            IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
         {
             if (IsInitialized)
             {
                 return;
             }
-            base.Initialize(wssUrl, websocket, restClient, apiKey, apiSecret);
+            Initialize(wssUrl, websocket, restClient, apiKey, apiSecret);
             _job = job;
             FillSplit = new ConcurrentDictionary<long, GDAXFill>();
             _algorithm = algorithm;
@@ -216,6 +216,9 @@ namespace QuantConnect.Brokerages.GDAX
             subscriptionManager.UnsubscribeImpl += (s, t) => Unsubscribe(s);
 
             SubscriptionManager = subscriptionManager;
+
+            _coinbaseApi = new CoinbaseApi(apiKey, apiSecret, restApiUrl);
+
             ValidateSubscription();
         }
 

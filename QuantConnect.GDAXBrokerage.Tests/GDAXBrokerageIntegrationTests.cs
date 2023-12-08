@@ -70,7 +70,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
             var aggregator = new AggregationManager();
             return new GDAXBrokerage(Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com"), webSocketClient, restClient,
-                Config.Get("gdax-api-key"), Config.Get("gdax-api-secret"), algorithm.Object,
+                Config.Get("gdax-api-key"), Config.Get("gdax-api-secret"), Config.Get("coinbase-api-url"), algorithm.Object,
                 priceProvider.Object, aggregator, null);
         }
 

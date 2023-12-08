@@ -97,7 +97,7 @@ namespace QuantConnect.Brokerages.GDAX
             {
                 var dataQueueHandler = new GDAXDataQueueHandler(job.BrokerageData["gdax-url"], webSocketClient,
                     restClient, job.BrokerageData["gdax-api-key"], job.BrokerageData["gdax-api-secret"],
-                    algorithm, priceProvider, aggregator, job);
+                    job.BrokerageData["coinbase-api-url"], algorithm, priceProvider, aggregator, job);
 
                 Composer.Instance.AddPart<IDataQueueHandler>(dataQueueHandler);
 
@@ -107,7 +107,7 @@ namespace QuantConnect.Brokerages.GDAX
             {
                 brokerage = new GDAXBrokerage(job.BrokerageData["gdax-url"], webSocketClient,
                     restClient, job.BrokerageData["gdax-api-key"], job.BrokerageData["gdax-api-secret"],
-                    algorithm, priceProvider, aggregator, job);
+                    job.BrokerageData["coinbase-api-url"], algorithm, priceProvider, aggregator, job);
             }
 
             return brokerage;

@@ -20,6 +20,7 @@ using System.Linq;
 using System.Globalization;
 using System.Security.Cryptography;
 using QuantConnect.CoinbaseBrokerage.Models;
+using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -120,11 +121,11 @@ namespace QuantConnect.Brokerages.GDAX
             {
                 return Orders.OrderStatus.PartiallyFilled;
             }
-            else if (order.Status == Open || order.Status == Pending || order.Status == Active)
+            else if (order.Status == BrokerageEnums.OrderStatus.OPEN)
             {
                 return Orders.OrderStatus.Submitted;
             }
-            else if (order.Status == Done || order.Status == Settled)
+            else if (order.Status == BrokerageEnums.OrderStatus.FILLED)
             {
                 return Orders.OrderStatus.Filled;
             }

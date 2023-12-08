@@ -16,6 +16,7 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.CoinbaseBrokerage.Models;
@@ -23,10 +24,10 @@ namespace QuantConnect.CoinbaseBrokerage.Models;
 public readonly struct CoinbaseCancelOrders
 {
     [JsonProperty("results")]
-    public CoinbaseCancelOrder[] Result { get; }
+    public IEnumerable<CoinbaseCancelOrder> Result { get; }
 
     [JsonConstructor]
-    public CoinbaseCancelOrders(CoinbaseCancelOrder[] result) => Result = result;
+    public CoinbaseCancelOrders(IEnumerable<CoinbaseCancelOrder> result) => Result = result;
 }
 
 
