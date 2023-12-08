@@ -19,7 +19,7 @@ using System.Text;
 using System.Linq;
 using System.Globalization;
 using System.Security.Cryptography;
-using QuantConnect.GDAX.Models;
+using QuantConnect.CoinbaseBrokerage.Models;
 
 namespace QuantConnect.Brokerages.GDAX
 {

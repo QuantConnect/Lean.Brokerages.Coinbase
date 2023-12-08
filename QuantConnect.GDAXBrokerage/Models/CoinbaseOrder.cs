@@ -13,10 +13,12 @@
  * limitations under the License.
 */
 
-using Newtonsoft.Json;
 using System;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-namespace QuantConnect.GDAX.Models;
+namespace QuantConnect.CoinbaseBrokerage.Models;
 
 /// <summary>
 /// Business data of Coinbase order response
@@ -84,11 +86,11 @@ public readonly struct CoinbaseOrder
     public string Status { get; }
 
     /// <summary>
-    /// Possible values: 
-    /// [UNKNOWN_TIME_IN_FORCE, GOOD_UNTIL_DATE_TIME, GOOD_UNTIL_CANCELLED, IMMEDIATE_OR_CANCEL, FILL_OR_KILL]
+    /// Time in Force policies
     /// </summary>
     [JsonProperty("time_in_force")]
-    public string TimeInForce { get; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public TimeInForce TimeInForce { get; }
 
     /// <summary>
     /// Timestamp for when the order was created
@@ -249,7 +251,7 @@ public readonly struct CoinbaseOrder
 
     [JsonConstructor]
     public CoinbaseOrder(string orderId, string productId, string userId, OrderConfiguration orderConfiguration,
-        string side, string clientOrderId, string status, string timeInForce, DateTime createdTime, decimal completionPercentage,
+        string side, string clientOrderId, string status, TimeInForce timeInForce, DateTime createdTime, decimal completionPercentage,
         decimal filledSize, decimal averageFilledPrice, string fee, decimal numberOfFills, decimal filledValue, bool pendingCancel,
         bool sizeInQuote, decimal totalFees, bool sizeInclusiveOfFees, decimal totalValueAfterFees, string triggerStatus,
         string orderType, string rejectReason, bool settled, string productType, string rejectMessage, string cancelMessage,

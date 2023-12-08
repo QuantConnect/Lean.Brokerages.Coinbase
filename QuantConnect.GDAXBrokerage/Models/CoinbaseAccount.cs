@@ -16,7 +16,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace QuantConnect.GDAX.Models;
+namespace QuantConnect.CoinbaseBrokerage.Models;
 
 /// <summary>
 /// Business data of Coinbase account response

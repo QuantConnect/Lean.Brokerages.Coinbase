@@ -13,25 +13,13 @@
  * limitations under the License.
 */
 
-using Newtonsoft.Json;
+namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
-
-/// <summary>
-/// Coinbase default http response message
-/// </summary>
-public class CoinbaseResponse
+public enum FailureReason
 {
-    /// <summary>
-    /// Whether there are additional pages for this query.
-    /// </summary>
-    [JsonProperty("has_next")]
-    public bool HasNext { get; set; }
-
-    /// <summary>
-    /// Cursor for paginating. Users can use this string to pass in the next call to this endpoint, 
-    /// and repeat this process to fetch all accounts through pagination.
-    /// </summary>
-    [JsonProperty("cursor")]
-    public string Cursor { get; set; }
+    UNKNOWN_CANCEL_FAILURE_REASON = 0,
+    INVALID_CANCEL_REQUEST = 1,
+    UNKNOWN_CANCEL_ORDER = 2,
+    COMMANDER_REJECTED_CANCEL_ORDER = 3,
+    DUPLICATE_CANCEL_REQUEST = 4
 }

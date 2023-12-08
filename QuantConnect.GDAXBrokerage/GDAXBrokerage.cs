@@ -19,7 +19,6 @@ using QuantConnect.Api;
 using QuantConnect.Configuration;
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
-using QuantConnect.GDAX.Models;
 using QuantConnect.Logging;
 using QuantConnect.Orders;
 using QuantConnect.Orders.Fees;
@@ -36,6 +35,8 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
+using QuantConnect.CoinbaseBrokerage.Models;
+using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -263,6 +264,7 @@ namespace QuantConnect.Brokerages.GDAX
                 {
                     var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtd.LimitPrice, order.CreatedTime);
+                    leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.LimitGtd.EndTime);
                 }
                 else if (order.OrderConfiguration.StopLimitGtc != null)
                 {
@@ -273,6 +275,7 @@ namespace QuantConnect.Brokerages.GDAX
                 {
                     var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtd.StopPrice, order.OrderConfiguration.StopLimitGtd.LimitPrice, order.CreatedTime);
+                    leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.StopLimitGtd.EndTime);
                 }
                 else
                 {
@@ -492,6 +495,22 @@ namespace QuantConnect.Brokerages.GDAX
 
             _websocketRateLimit.DisposeSafely();
         }
+
+        #region Utils
+        
+        private TimeInForce ConvertTimeInForce(BrokerageEnums.TimeInForce timeInForce, DateTime expiryDate = default)
+        {
+            switch (timeInForce)
+            {
+                case BrokerageEnums.TimeInForce.GOOD_UNTIL_DATE_TIME:
+                    return TimeInForce.GoodTilDate(expiryDate);
+                case BrokerageEnums.TimeInForce.GOOD_UNTIL_CANCELLED:
+                default:
+                    return TimeInForce.GoodTilCanceled;
+            }
+        }
+
+        #endregion
 
         private class ModulesReadLicenseRead : Api.RestResponse
         {
