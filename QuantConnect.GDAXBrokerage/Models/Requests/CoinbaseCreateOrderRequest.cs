@@ -8,7 +8,7 @@ namespace QuantConnect.CoinbaseBrokerage.Models.Requests;
 /// <summary>
 /// Coinbase place order api request
 /// </summary>
-public class CoinbasePlaceOrderRequest
+public class CoinbaseCreateOrderRequest
 {
     [JsonProperty("client_order_id")]
     public Guid ClientOrderId { get; set; }

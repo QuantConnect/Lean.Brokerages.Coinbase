@@ -135,11 +135,11 @@ public class CoinbaseApi : IDisposable
         return response;
     }
 
-    private CoinbasePlaceOrderRequest CreateRequest(Order leanOrder)
+    private CoinbaseCreateOrderRequest CreateRequest(Order leanOrder)
     {
         if (leanOrder.Direction == OrderDirection.Hold) throw new NotSupportedException();
 
-        var model = new CoinbasePlaceOrderRequest()
+        var model = new CoinbaseCreateOrderRequest()
         {
             ClientOrderId = Guid.NewGuid(),
             ProductId = SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
