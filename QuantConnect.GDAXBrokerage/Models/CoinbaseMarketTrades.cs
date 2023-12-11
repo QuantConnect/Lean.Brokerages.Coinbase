@@ -69,7 +69,7 @@ public readonly struct Trades
 
     [JsonConstructor]
     public Trades(string tradeId, string productId, decimal price, decimal size, DateTime time, OrderSide side,
-        decimal bid, decimal ask)
+        decimal? bid, decimal? ask)
     {
         TradeId = tradeId;
         ProductId = productId;
