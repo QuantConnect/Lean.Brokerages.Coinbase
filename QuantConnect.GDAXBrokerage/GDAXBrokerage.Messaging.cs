@@ -40,6 +40,7 @@ namespace QuantConnect.Brokerages.GDAX
     public partial class GDAXBrokerage
     {
         private CoinbaseApi _coinbaseApi;
+        private SymbolPropertiesDatabaseSymbolMapper _symbolMapper;
 
         /// <summary>
         /// Collection of partial split messages
@@ -49,7 +50,6 @@ namespace QuantConnect.Brokerages.GDAX
         private IAlgorithm _algorithm;
         private readonly CancellationTokenSource _canceller = new CancellationTokenSource();
         private readonly ConcurrentDictionary<Symbol, DefaultOrderBook> _orderBooks = new ConcurrentDictionary<Symbol, DefaultOrderBook>();
-        private readonly SymbolPropertiesDatabaseSymbolMapper _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
         private bool _isDataQueueHandler;
         private LiveNodePacket _job;
         private RateGate _websocketRateLimit = new(7, TimeSpan.FromSeconds(1));
@@ -217,7 +217,8 @@ namespace QuantConnect.Brokerages.GDAX
 
             SubscriptionManager = subscriptionManager;
 
-            _coinbaseApi = new CoinbaseApi(apiKey, apiSecret, restApiUrl);
+            _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
+            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
 
             ValidateSubscription();
         }
@@ -401,7 +402,7 @@ namespace QuantConnect.Brokerages.GDAX
 
             var req = new RestRequest($"/products/{brokerageSymbol}/ticker", Method.GET);
             var response = ExecuteRestRequest(req, GdaxEndpointType.Public);
-            if (response.StatusCode != System.Net.HttpStatusCode.OK)
+            if (response.StatusCode != HttpStatusCode.OK)
             {
                 throw new Exception($"GDAXBrokerage.GetTick: request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
             }

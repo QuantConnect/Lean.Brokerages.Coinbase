@@ -97,24 +97,6 @@ namespace QuantConnect.Brokerages.GDAX
             return token;
         }
 
-        private static string ConvertOrderType(Orders.OrderType orderType)
-        {
-            if (orderType == Orders.OrderType.Limit || orderType == Orders.OrderType.Market)
-            {
-                return orderType.ToLower();
-            }
-            else if (orderType == Orders.OrderType.StopMarket)
-            {
-                return "stop";
-            }
-            else if (orderType == Orders.OrderType.StopLimit)
-            {
-                return "limit";
-            }
-
-            throw new NotSupportedException($"GDAXBrokerage.ConvertOrderType: Unsupported order type:{orderType.ToStringInvariant()}");
-        }
-
         private static Orders.OrderStatus ConvertOrderStatus(CoinbaseOrder order)
         {
             if (order.CompletionPercentage > 0 && order.CompletionPercentage != 100)

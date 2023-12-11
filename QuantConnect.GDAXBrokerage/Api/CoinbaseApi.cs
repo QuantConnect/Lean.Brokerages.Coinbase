@@ -18,8 +18,13 @@ using RestSharp;
 using System.Linq;
 using Newtonsoft.Json;
 using QuantConnect.Util;
+using QuantConnect.Orders;
+using QuantConnect.Brokerages;
+using QuantConnect.Securities;
 using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Models;
+using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.CoinbaseBrokerage.Models.Requests;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.CoinbaseBrokerage.Api;
@@ -45,8 +50,21 @@ public class CoinbaseApi : IDisposable
     /// </summary>
     private readonly string _apiPrefix = "/api/v3";
 
-    public CoinbaseApi(string apiKey, string apiKeySecret, string restApiUrl)
+    /// <summary>
+    /// Symbol mapper
+    /// </summary>
+    private ISymbolMapper SymbolMapper { get; }
+
+    /// <summary>
+    /// Security provider
+    /// </summary>
+    private ISecurityProvider SecurityProvider { get; }
+
+    public CoinbaseApi(ISymbolMapper symbolMapper, ISecurityProvider securityProvider,
+        string apiKey, string apiKeySecret, string restApiUrl)
     {
+        SymbolMapper = symbolMapper;
+        SecurityProvider = securityProvider;
         _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
     }
 
@@ -75,6 +93,13 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseCancelOrders>(response.Content).Result.First();
     }
 
+    /// <summary>
+    /// Get snapshot information, by product ID, about the last trades (ticks), best bid/ask, and 24h volume.
+    /// </summary>
+    /// <param name="productId">The trading pair, i.e., 'BTC-USD'.</param>
+    /// <param name="limit">Number of trades to return.</param>
+    /// <returns>An instance of the <see cref="CoinbaseMarketTrades"/> struct.</returns>
+    /// <exception cref="ArgumentException">Thrown when the provided productId is null or empty.</exception>
     public CoinbaseMarketTrades GetMarketTrades(string productId, int limit = 1)
     {
         if (string.IsNullOrEmpty(productId))
@@ -91,6 +116,145 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseMarketTrades>(response.Content);
     }
 
+    public IRestResponse CreateOrder(Order leanOrder)
+    {
+        var placeOrderRequest = CreateRequest(leanOrder);
+
+        var request = new RestRequest("/api/v3/brokerage/orders", Method.POST);
+
+        request.AddJsonBody(JsonConvert.SerializeObject(placeOrderRequest,
+            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
+
+        var response = _apiClient.ExecuteRequest(request);
+
+        return response;
+    }
+
+    private CoinbasePlaceOrderRequest CreateRequest(Order leanOrder)
+    {
+        if (leanOrder.Direction == OrderDirection.Hold) throw new NotSupportedException();
+
+        var model = new CoinbasePlaceOrderRequest()
+        {
+            ClientOrderId = Guid.NewGuid(),
+            ProductId = SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
+            Side = leanOrder.Direction == OrderDirection.Buy ? OrderSide.BUY : OrderSide.SELL,
+        };
+
+        switch (leanOrder)
+        {
+            case MarketOrder:
+                model.OrderConfiguration = new OrderConfiguration { MarketIoc = new() };
+                if (leanOrder.Direction == OrderDirection.Buy)
+                {
+                    var price = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
+                    model.OrderConfiguration.MarketIoc.QuoteSize = price * Math.Abs(leanOrder.Quantity);
+                }
+                else
+                {
+                    model.OrderConfiguration.MarketIoc.BaseSize = Math.Abs(leanOrder.Quantity);
+                }
+                break;
+            case LimitOrder limitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilCanceledTimeInForce:
+                {
+                    model.OrderConfiguration = new OrderConfiguration
+                    {
+                        LimitGtc = new()
+                        {
+                            BaseSize = Math.Abs(leanOrder.Quantity),
+                            LimitPrice = limitOrder.LimitPrice,
+                        }
+                    };
+
+                    if (leanOrder.Properties is GDAXOrderProperties prop)
+                    {
+                        model.OrderConfiguration.LimitGtc.PostOnly = prop.PostOnly;
+                    }
+
+                    break;
+                }
+            case LimitOrder limitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilDateTimeInForce tilDate:
+                {
+                    model.OrderConfiguration = new OrderConfiguration
+                    {
+                        LimitGtd = new()
+                        {
+                            BaseSize = Math.Abs(leanOrder.Quantity),
+                            LimitPrice = limitOrder.LimitPrice,
+                            EndTime = tilDate.Expiry,
+                        }
+                    };
+
+                    if (leanOrder.Properties is GDAXOrderProperties prop)
+                    {
+                        model.OrderConfiguration.LimitGtd.PostOnly = prop.PostOnly;
+                    }
+
+                    break;
+                }
+            case StopLimitOrder stopLimitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilCanceledTimeInForce:
+                var stopLimitGtc = new StopLimitGtc()
+                {
+                    BaseSize = Math.Abs(leanOrder.Quantity),
+                    LimitPrice = stopLimitOrder.LimitPrice,
+                    StopPrice = stopLimitOrder.StopPrice
+                };
+
+                var ticker = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
+                stopLimitGtc.StopDirection = stopLimitGtc.StopPrice > ticker ?
+                    StopDirection.STOP_DIRECTION_STOP_UP :
+                    StopDirection.STOP_DIRECTION_STOP_DOWN;
+
+                model.OrderConfiguration = new() { StopLimitGtc = stopLimitGtc };
+                break;
+            case StopLimitOrder stopLimitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilDateTimeInForce tilDate:
+                var stopLimitGtd = new StopLimitGtd()
+                {
+                    EndTime = tilDate.Expiry,
+                    StopPrice = stopLimitOrder.StopPrice,
+                    LimitPrice = stopLimitOrder.LimitPrice,
+                    BaseSize = Math.Abs(leanOrder.Quantity),
+                };
+
+                ticker = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
+                stopLimitGtd.StopDirection = stopLimitGtd.StopPrice > ticker ?
+                    StopDirection.STOP_DIRECTION_STOP_UP :
+                    StopDirection.STOP_DIRECTION_STOP_DOWN;
+
+                model.OrderConfiguration = new() { StopLimitGtd = stopLimitGtd };
+                break;
+            default: throw new NotSupportedException($"Order type {leanOrder.Type.ToStringInvariant()} is not supported");
+        };
+
+        // TODO: Add CoinbaseOrderProperties
+        if (false)
+        {
+            model.SelfTradePreventionId = Guid.NewGuid();
+        }
+
+        return model;
+    }
+
+    private decimal GetTickerPrice(Symbol symbol, OrderDirection leanOrderDirection)
+    {
+        var security = SecurityProvider.GetSecurity(symbol);
+        var tickerPrice = leanOrderDirection == OrderDirection.Buy ? security.AskPrice : security.BidPrice;
+        if (tickerPrice == 0)
+        {
+            var brokerageSymbol = SymbolMapper.GetBrokerageSymbol(symbol);
+            var ticker = GetMarketTrades(brokerageSymbol);
+
+            if (ticker.BestBid == 0 || ticker.BestAsk == 0)
+            {
+                throw new KeyNotFoundException(
+                    $"CoinbaseBrokerage: Unable to resolve currency conversion pair: {symbol}");
+            }
+
+            tickerPrice = leanOrderDirection == OrderDirection.Buy ? ticker.BestAsk : ticker.BestBid;
+        }
+
+        return tickerPrice;
+    }
 
 
     /// <summary>

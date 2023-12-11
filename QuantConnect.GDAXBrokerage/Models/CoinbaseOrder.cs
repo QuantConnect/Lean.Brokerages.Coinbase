@@ -72,7 +72,8 @@ public readonly struct CoinbaseOrder
     /// Possible values: [BUY, SELL]
     /// </summary>
     [JsonProperty("side")]
-    public string Side { get; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public OrderSide Side { get; }
 
     /// <summary>
     /// Client specified ID of order.
@@ -253,7 +254,7 @@ public readonly struct CoinbaseOrder
 
     [JsonConstructor]
     public CoinbaseOrder(string orderId, string productId, string userId, OrderConfiguration orderConfiguration,
-        string side, string clientOrderId, OrderStatus status, TimeInForce timeInForce, DateTime createdTime, decimal completionPercentage,
+        OrderSide side, string clientOrderId, OrderStatus status, TimeInForce timeInForce, DateTime createdTime, decimal completionPercentage,
         decimal filledSize, decimal averageFilledPrice, string fee, decimal numberOfFills, decimal filledValue, bool pendingCancel,
         bool sizeInQuote, decimal totalFees, bool sizeInclusiveOfFees, decimal totalValueAfterFees, string triggerStatus,
         string orderType, string rejectReason, bool settled, string productType, string rejectMessage, string cancelMessage,
@@ -425,7 +426,8 @@ public class StopLimitGtc : Limit
     /// Possible values: [STOP_DIRECTION_STOP_UP, STOP_DIRECTION_STOP_DOWN]
     /// </summary>
     [JsonProperty("stop_direction")]
-    public string StopDirection { get; set; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public StopDirection StopDirection { get; set; }
 }
 
 /// <summary>

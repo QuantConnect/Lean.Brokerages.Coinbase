@@ -27,7 +27,6 @@ using QuantConnect.Util;
 using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -53,54 +52,12 @@ namespace QuantConnect.Brokerages.GDAX
         /// <summary>
         /// Creates a new order
         /// </summary>
-        /// <param name="order"></param>
-        /// <returns></returns>
+        /// <param name="order">Lean Order</param>
+        /// <returns>true - order placed successfully otherwise false</returns>
         public override bool PlaceOrder(Order order)
         {
-            var req = new RestRequest("/orders", Method.POST);
+            var response = _coinbaseApi.CreateOrder(order);
 
-            dynamic payload = new ExpandoObject();
-
-            payload.size = Math.Abs(order.Quantity);
-            payload.side = order.Direction.ToLower();
-            payload.type = ConvertOrderType(order.Type);
-
-            if (order.Type != OrderType.Market)
-            {
-                payload.price =
-                    (order as LimitOrder)?.LimitPrice ??
-                    (order as StopLimitOrder)?.LimitPrice ??
-                    (order as StopMarketOrder)?.StopPrice ?? 0;
-            }
-
-            payload.product_id = _symbolMapper.GetBrokerageSymbol(order.Symbol);
-
-            if (_algorithm.BrokerageModel.AccountType == AccountType.Margin)
-            {
-                payload.overdraft_enabled = true;
-            }
-
-            var orderProperties = order.Properties as GDAXOrderProperties;
-            if (orderProperties != null)
-            {
-                if (order.Type == OrderType.Limit)
-                {
-                    payload.post_only = orderProperties.PostOnly;
-                }
-            }
-
-            if (order.Type == OrderType.StopLimit)
-            {
-                payload.stop = order.Direction == OrderDirection.Buy ? "entry" : "loss";
-                payload.stop_price = (order as StopLimitOrder).StopPrice;
-            }
-
-            var json = JsonConvert.SerializeObject(payload);
-            Log.Trace($"GDAXBrokerage.PlaceOrder(): {json}");
-            req.AddJsonBody(json);
-
-            GetAuthenticationToken(req);
-            var response = ExecuteRestRequest(req, GdaxEndpointType.Private);
             var orderFee = OrderFee.Zero;
             if (response.StatusCode == HttpStatusCode.OK && response.Content != null)
             {
@@ -228,34 +185,34 @@ namespace QuantConnect.Brokerages.GDAX
 
                 if (order.OrderConfiguration.MarketIoc != null)
                 {
-                    var quantity = order.Side == "BUY" ?
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ?
                         order.OrderConfiguration.MarketIoc.QuoteSize : Decimal.Negate(order.OrderConfiguration.MarketIoc.BaseSize);
                     leanOrder = new MarketOrder(symbol, quantity, order.CreatedTime, order.AverageFilledPrice);
                 }
                 else if (order.OrderConfiguration.LimitGtc != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtc.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.LimitGtd != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.LimitGtd.EndTime);
                 }
                 else if (order.OrderConfiguration.LimitIoc != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitIoc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitIoc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitIoc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitIoc.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitIoc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.StopLimitGtc != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtc.StopPrice, order.OrderConfiguration.StopLimitGtc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.StopLimitGtd != null)
                 {
-                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtd.StopPrice, order.OrderConfiguration.StopLimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.StopLimitGtd.EndTime);
                 }

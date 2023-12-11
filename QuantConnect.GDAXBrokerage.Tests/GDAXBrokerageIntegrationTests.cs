@@ -25,6 +25,7 @@ using QuantConnect.Brokerages;
 using QuantConnect.Tests.Common.Securities;
 using RestSharp;
 using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.CoinbaseBrokerage.Api;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
@@ -34,6 +35,10 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         #region Properties
         protected override Symbol Symbol => Symbol.Create("ETHBTC", SecurityType.Crypto, Market.GDAX);
 
+        protected virtual ISymbolMapper SymbolMapper => new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
+
+        protected CoinbaseApi _api;
+
         /// <summary>
         ///     Gets the security type associated with the <see cref="BrokerageTests.Symbol" />
         /// </summary>
@@ -41,7 +46,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
         protected override decimal GetDefaultQuantity()
         {
-            return 0.01m;
+            return 0.000016m;
         }
         #endregion
 
@@ -68,9 +73,15 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var priceProvider = new Mock<IPriceProvider>();
             priceProvider.Setup(a => a.GetLastPrice(It.IsAny<Symbol>())).Returns(1.234m);
 
+            var apiKey = Config.Get("gdax-api-key");
+            string apiSecret = Config.Get("gdax-api-secret");
+            string restApiUrl = Config.Get("coinbase-api-url");
+
+            _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
+
             var aggregator = new AggregationManager();
             return new GDAXBrokerage(Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com"), webSocketClient, restClient,
-                Config.Get("gdax-api-key"), Config.Get("gdax-api-secret"), Config.Get("coinbase-api-url"), algorithm.Object,
+                apiKey, apiSecret, restApiUrl, algorithm.Object,
                 priceProvider.Object, aggregator, null);
         }
 
@@ -104,8 +115,8 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         // no stop limit support
         private static TestCaseData[] OrderParameters => new[]
         {
-            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX))).SetName("MarketOrder"),
-            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX), 305m, 300m)).SetName("LimitOrder"),
+            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX))),
+            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m)),
         };
 
         [Test, TestCaseSource(nameof(OrderParameters))]
@@ -148,6 +159,19 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         public override void LongFromShort(OrderTestParameters parameters)
         {
             base.LongFromShort(parameters);
+        }
+
+        [TestCase("BTCUSDC")]
+        public void GetTick(string ticker)
+        {
+            var symbol = Symbol.Create(ticker, SecurityType.Crypto, Market.GDAX);
+            var brokerageSymbol = SymbolMapper.GetBrokerageSymbol(symbol);
+
+            var tick = _api.GetMarketTrades(brokerageSymbol);
+
+            Assert.IsNotNull(tick);
+            Assert.Greater(tick.BestAsk, 0);
+            Assert.Greater(tick.BestBid, 0);
         }
     }
 }
