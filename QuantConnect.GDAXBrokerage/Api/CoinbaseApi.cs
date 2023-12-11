@@ -13,16 +13,14 @@
  * limitations under the License.
 */
 
-using Newtonsoft.Json;
-using QuantConnect.CoinbaseBrokerage.Models;
-using QuantConnect.Util;
-using RestSharp;
 using System;
-using static QuantConnect.Brokerages.GDAX.GDAXBrokerage;
-using System.Net;
-using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using RestSharp;
 using System.Linq;
+using Newtonsoft.Json;
+using QuantConnect.Util;
+using System.Collections.Generic;
+using QuantConnect.CoinbaseBrokerage.Models;
+using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.CoinbaseBrokerage.Api;
 
@@ -52,11 +50,11 @@ public class CoinbaseApi : IDisposable
         _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
     }
 
-    public IEnumerable<CoinbaseOrder> GetListOrders(OrderStatus orderStatus)
+    public IEnumerable<CoinbaseOrder> GetListOrders(BrokerageEnums.OrderStatus orderStatus)
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/historical/batch", Method.GET);
 
-        if (orderStatus != OrderStatus.UNKNOWN_ORDER_STATUS)
+        if (orderStatus != BrokerageEnums.OrderStatus.UNKNOWN_ORDER_STATUS)
         {
             request.AddQueryParameter("order_status", orderStatus.ToString());
         }

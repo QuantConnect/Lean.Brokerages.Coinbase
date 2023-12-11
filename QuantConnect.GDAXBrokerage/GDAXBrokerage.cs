@@ -243,6 +243,11 @@ namespace QuantConnect.Brokerages.GDAX
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.LimitGtd.EndTime);
                 }
+                else if (order.OrderConfiguration.LimitIoc != null)
+                {
+                    var quantity = order.Side == "BUY" ? order.OrderConfiguration.LimitIoc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitIoc.BaseSize);
+                    leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitIoc.LimitPrice, order.CreatedTime);
+                }
                 else if (order.OrderConfiguration.StopLimitGtc != null)
                 {
                     var quantity = order.Side == "BUY" ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);

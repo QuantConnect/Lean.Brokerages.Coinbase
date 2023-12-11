@@ -322,6 +322,12 @@ public class OrderConfiguration
     public LimitGtd LimitGtd { get; set; }
 
     /// <summary>
+    /// Limit Immediate or cancel
+    /// </summary>
+    [JsonProperty("sor_limit_ioc")]
+    public LimitIoc LimitIoc { get; set; }
+
+    /// <summary>
     /// Stop Limit Good till cancel
     /// </summary>
     [JsonProperty("stop_limit_stop_limit_gtc")]
@@ -352,11 +358,7 @@ public class MarketIoc
     public decimal QuoteSize { get; set; }
 }
 
-/// <summary>
-/// LimitGtc Order Configuration Type
-/// [Gtc] - Good Till Cancel
-/// </summary>
-public class LimitGtc
+public abstract class Limit
 {
     /// <summary>
     /// Amount of base currency to spend on order
@@ -369,7 +371,14 @@ public class LimitGtc
     /// </summary>
     [JsonProperty("limit_price")]
     public decimal LimitPrice { get; set; }
+}
 
+/// <summary>
+/// LimitGtc Order Configuration Type
+/// [Gtc] - Good Till Cancel
+/// </summary>
+public class LimitGtc : Limit
+{
     /// <summary>
     /// The post-only flag indicates that the order should only make liquidity. 
     /// If any part of the order results in taking liquidity, the order will be rejected and no part of it will execute.
@@ -392,23 +401,18 @@ public class LimitGtd : LimitGtc
 }
 
 /// <summary>
+/// LimitIoc Order Configuration Type
+/// [Ioc] - Immediate or cancel
+/// </summary>
+public class LimitIoc : Limit
+{ }
+
+/// <summary>
 /// StopLimitGtc Order Configuration Type
 /// [Gtc] - Good Till Cancel
 /// </summary>
-public class StopLimitGtc
+public class StopLimitGtc : Limit
 {
-    /// <summary>
-    /// Amount of base currency to spend on order
-    /// </summary>
-    [JsonProperty("base_size")]
-    public decimal BaseSize { get; set; }
-
-    /// <summary>
-    /// Ceiling price for which the order should get filled.
-    /// </summary>
-    [JsonProperty("limit_price")]
-    public decimal LimitPrice { get; set; }
-
     /// <summary>
     /// Price at which the order should trigger - if stop direction is Up, 
     /// then the order will trigger when the last trade price goes above this, 
