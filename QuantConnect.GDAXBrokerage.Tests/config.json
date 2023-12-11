@@ -1,3 +1,6 @@
 {
-  "data-folder": "../../../../Lean/Data/"
+  "data-folder": "../../../../Lean/Data/",
+  "coinbase-api-url": "",
+  "gdax-api-key": "",
+  "gdax-api-secret": ""
 }
