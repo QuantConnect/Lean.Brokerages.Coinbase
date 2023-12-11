@@ -23,6 +23,7 @@ using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Models;
+using QuantConnect.CoinbaseBrokerage.Converters;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 using QuantConnect.CoinbaseBrokerage.Models.Requests;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
@@ -123,7 +124,11 @@ public class CoinbaseApi : IDisposable
         var request = new RestRequest("/api/v3/brokerage/orders", Method.POST);
 
         request.AddJsonBody(JsonConvert.SerializeObject(placeOrderRequest,
-            new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }));
+            new JsonSerializerSettings 
+            {
+                Converters = new List<JsonConverter>() { new CoinbaseDecimalStringConverter() },
+                NullValueHandling = NullValueHandling.Ignore 
+            }));
 
         var response = _apiClient.ExecuteRequest(request);
 
