@@ -43,7 +43,7 @@ public readonly struct CoinbaseCancelOrder
     /// </summary>
     [JsonConverter(typeof(StringEnumConverter))]
     [JsonProperty("failure_reason")]
-    public FailureReason FailureReason { get; }
+    public FailureCancelOrderReason FailureReason { get; }
 
     /// <summary>
     /// The IDs of order cancel request was initiated for
@@ -52,7 +52,7 @@ public readonly struct CoinbaseCancelOrder
     public string OrderId { get; }
 
     [JsonConstructor]
-    public CoinbaseCancelOrder(bool success, FailureReason failureReason, string orderId)
+    public CoinbaseCancelOrder(bool success, FailureCancelOrderReason failureReason, string orderId)
     {
         Success = success;
         FailureReason = failureReason;

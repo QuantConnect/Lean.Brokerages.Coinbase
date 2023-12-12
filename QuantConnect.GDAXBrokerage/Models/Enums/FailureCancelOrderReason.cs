@@ -15,7 +15,10 @@
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-public enum FailureReason
+/// <summary>
+/// Failure Cancel Order Reason
+/// </summary>
+public enum FailureCancelOrderReason
 {
     UNKNOWN_CANCEL_FAILURE_REASON = 0,
     INVALID_CANCEL_REQUEST = 1,
