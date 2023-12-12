@@ -318,7 +318,7 @@ namespace QuantConnect.Brokerages.GDAX
                 }
 
                 var restRequest = new RestRequest($"/products/{productId}/candles?start={startTime:o}&end={endTime:o}&granularity={granularity}", Method.GET);
-                var response = ExecuteRestRequest(restRequest, GdaxEndpointType.Public);
+                var response = new RestSharp.RestResponse();
 
                 if (response.StatusCode != HttpStatusCode.OK)
                 {

@@ -612,7 +612,7 @@ namespace QuantConnect.Brokerages.GDAX
                         var request = new RestRequest($"/fills?order_id={orderId}", Method.GET);
                         GetAuthenticationToken(request);
 
-                        var response = ExecuteRestRequest(request, GdaxEndpointType.Private, false);
+                        var response = new RestResponse();
 
                         if (response.StatusCode != HttpStatusCode.OK)
                         {

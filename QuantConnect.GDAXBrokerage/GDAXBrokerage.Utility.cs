@@ -114,33 +114,5 @@ namespace QuantConnect.Brokerages.GDAX
 
             return Orders.OrderStatus.None;
         }
-
-        private IRestResponse ExecuteRestRequest(IRestRequest request, GdaxEndpointType endpointType, bool sendRateLimitMessage = true)
-        {
-            const int maxAttempts = 10;
-            var attempts = 0;
-            IRestResponse response;
-
-            do
-            {
-                var rateLimiter = endpointType == GdaxEndpointType.Private ? _privateEndpointRateLimiter : _publicEndpointRateLimiter;
-
-                if (!rateLimiter.WaitToProceed(TimeSpan.Zero))
-                {
-                    if (sendRateLimitMessage)
-                    {
-                        OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "RateLimit",
-                            "The API request has been rate limited. To avoid this message, please reduce the frequency of API calls."));
-                    }
-
-                    rateLimiter.WaitToProceed();
-                }
-
-                response = RestClient.Execute(request);
-                // 429 status code: Too Many Requests
-            } while (++attempts < maxAttempts && (int) response.StatusCode == 429);
-
-            return response;
-        }
     }
 }
