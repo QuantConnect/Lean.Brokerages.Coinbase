@@ -241,16 +241,9 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var list = new List<CashAmount>();
 
-            var request = new RestRequest("/api/v3/brokerage/accounts", Method.GET);
-            GetAuthenticationToken(request);
-            var response = ExecuteRestRequest(request, GdaxEndpointType.Private);
+            var accounts = _coinbaseApi.GetListAccounts();
 
-            if (response.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"GDAXBrokerage.GetCashBalance: request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
-            }
-
-            foreach (var item in JsonConvert.DeserializeObject<CoinbaseAccountResponse>(response.Content).Accounts)
+            foreach (var item in accounts)
             {
                 if(item.AvailableBalance.Value > 0m)
                 {

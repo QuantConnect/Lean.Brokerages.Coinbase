@@ -15,6 +15,7 @@
 
 using System;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace QuantConnect.CoinbaseBrokerage.Models;
 
@@ -27,7 +28,7 @@ public class CoinbaseAccountResponse : CoinbaseResponse
     /// Data about all accounts
     /// </summary>
     [JsonProperty("accounts")]
-    public CoinbaseAccount[] Accounts { get; set; }
+    public IEnumerable<CoinbaseAccount> Accounts { get; set; }
 
     /// <summary>
     /// Number of accounts returned

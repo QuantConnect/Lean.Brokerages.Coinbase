@@ -69,6 +69,19 @@ public class CoinbaseApi : IDisposable
         _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
     }
 
+    /// <summary>
+    /// Retrieves a list of Coinbase accounts associated with the authenticated user's brokerage.
+    /// </summary>
+    /// <returns>An IEnumerable of CoinbaseAccount objects representing the user's brokerage accounts.</returns>
+    public IEnumerable<CoinbaseAccount> GetListAccounts()
+    {
+        var request = new RestRequest($"{_apiPrefix}/brokerage/accounts", Method.GET);
+
+        var response = _apiClient.ExecuteRequest(request);
+
+        return JsonConvert.DeserializeObject<CoinbaseAccountResponse>(response.Content).Accounts;
+    }
+
     public IEnumerable<CoinbaseOrder> GetListOrders(BrokerageEnums.OrderStatus orderStatus)
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/historical/batch", Method.GET);
