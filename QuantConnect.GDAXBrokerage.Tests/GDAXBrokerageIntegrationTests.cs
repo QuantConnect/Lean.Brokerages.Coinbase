@@ -95,8 +95,9 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
         protected override decimal GetAskPrice(Symbol symbol)
         {
-            var tick = ((GDAXBrokerage)Brokerage).GetTick(symbol);
-            return tick.AskPrice;
+            var brokerageSymbol = SymbolMapper.GetBrokerageSymbol(symbol);
+            var tick = _api.GetMarketTrades(brokerageSymbol);
+            return tick.BestAsk;
         }
 
         protected override void ModifyOrderUntilFilled(Order order, OrderTestParameters parameters, double secondsTimeout = 90)

@@ -34,21 +34,6 @@ namespace QuantConnect.Tests.Brokerages.GDAX
     public class GDAXBrokerageAdditionalTests
     {
         [Test]
-        public void PublicEndpointCallsAreRateLimited()
-        {
-            using (var brokerage = GetBrokerage())
-            {
-                brokerage.Connect();
-                Assert.IsTrue(brokerage.IsConnected);
-
-                for (var i = 0; i < 50; i++)
-                {
-                    Assert.DoesNotThrow(() => brokerage.GetTick(Symbols.BTCEUR));
-                }
-            }
-        }
-
-        [Test]
         public void PrivateEndpointCallsAreRateLimited()
         {
             using (var brokerage = GetBrokerage())

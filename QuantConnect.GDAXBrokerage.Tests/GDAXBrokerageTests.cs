@@ -288,10 +288,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         [Test]
         public void GetTickTest()
         {
-            var actual = _unit.GetTick(_symbol);
-            Assert.AreEqual(333.98m, actual.BidPrice);
-            Assert.AreEqual(333.99m, actual.AskPrice);
-            Assert.AreEqual(5957.11914015, actual.Quantity);
+            throw new NotImplementedException();
         }
 
         [Test]
