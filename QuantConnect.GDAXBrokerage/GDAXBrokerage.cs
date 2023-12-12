@@ -87,6 +87,8 @@ namespace QuantConnect.Brokerages.GDAX
             //_pendingOrders.TryAdd(brokerId, new PendingOrder(order));
             //_fillMonitorResetEvent.Set();
 
+            order.BrokerId.Add(response.OrderId);
+
             OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, 
                 "CoinbaseBrokerage Order Event") { Status = OrderStatus.Submitted });
 
