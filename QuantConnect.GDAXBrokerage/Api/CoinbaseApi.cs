@@ -132,6 +132,12 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var res = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
+            return new CoinbaseCreateOrderResponse(false, FailureCreateOrderReason.UNKNOWN_FAILURE_REASON, "", null, res, null);
+        }
+
         return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
     }
 
@@ -140,7 +146,7 @@ public class CoinbaseApi : IDisposable
         if (leanOrder.Direction == OrderDirection.Hold) throw new NotSupportedException();
 
         var model = new CoinbaseCreateOrderRequest(
-            Guid.Empty,
+            Guid.NewGuid(),
             SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
             leanOrder.Direction == OrderDirection.Buy ? OrderSide.BUY : OrderSide.SELL);
 

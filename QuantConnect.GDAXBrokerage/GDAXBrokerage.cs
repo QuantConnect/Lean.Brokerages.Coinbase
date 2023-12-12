@@ -60,7 +60,9 @@ namespace QuantConnect.Brokerages.GDAX
 
             if(!response.Success)
             {
-                var errorMessage = response.ErrorResponse.Value.PreviewFailureReason;
+                var errorMessage = 
+                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UNKNOWN_FAILURE_REASON 
+                    ? response.ErrorResponse.Value.PreviewFailureReason : response.ErrorResponse.Value.Error.ToString();
                 OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event") 
                 { Status = OrderStatus.Invalid, Message = errorMessage });
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage));

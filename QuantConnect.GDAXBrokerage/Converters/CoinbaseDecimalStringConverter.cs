@@ -71,6 +71,12 @@ public class CoinbaseDecimalStringConverter : JsonConverter<decimal>
     /// <param name="serializer">The calling serializer.</param>
     public override void WriteJson(JsonWriter writer, decimal value, JsonSerializer serializer)
     {
+        // Not write zero value in json schema
+        if (value == decimal.Zero)
+        {
+            writer.WriteNull();
+            return;
+        }
         writer.WriteValue(value.ToStringInvariant());
     }
 }

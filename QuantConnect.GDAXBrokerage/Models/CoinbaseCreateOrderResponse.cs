@@ -14,6 +14,7 @@
 */
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.CoinbaseBrokerage.Models;
@@ -30,7 +31,8 @@ public readonly struct CoinbaseCreateOrderResponse
     /// Failure Reason
     /// </summary>
     [JsonProperty("failure_reason")]
-    public string FailureReason { get; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public FailureCreateOrderReason FailureReason { get; }
 
     /// <summary>
     /// The ID of the order created
@@ -56,7 +58,7 @@ public readonly struct CoinbaseCreateOrderResponse
     public OrderConfiguration OrderConfiguration { get; }
 
     [JsonConstructor]
-    public CoinbaseCreateOrderResponse(bool success, string failureReason, string orderId,
+    public CoinbaseCreateOrderResponse(bool success, FailureCreateOrderReason failureReason, string orderId,
         SuccessResponse? successResponse, ErrorResponse? errorResponse, OrderConfiguration orderConfiguration)
     {
         Success = success;
@@ -77,7 +79,8 @@ public readonly struct ErrorResponse
     /// Error
     /// </summary>
     [JsonProperty("error")]
-    public string Error { get; }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public FailureCreateOrderReason Error { get; }
 
     /// <summary>
     /// Generic error message explaining why the order was not created
@@ -98,7 +101,7 @@ public readonly struct ErrorResponse
     public string PreviewFailureReason { get; }
 
     [JsonConstructor]
-    public ErrorResponse(string error, string message, string errorDetails, string previewFailureReason)
+    public ErrorResponse(FailureCreateOrderReason error, string message, string errorDetails, string previewFailureReason)
     {
         Error = error;
         Message = message;
