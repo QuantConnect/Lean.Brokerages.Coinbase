@@ -33,7 +33,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
     public class GDAXBrokerageIntegrationTests : BrokerageTests
     {
         #region Properties
-        protected override Symbol Symbol => Symbol.Create("ETHBTC", SecurityType.Crypto, Market.GDAX);
+        protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX);
 
         protected virtual ISymbolMapper SymbolMapper => new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
 
@@ -52,9 +52,6 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
         protected override IBrokerage CreateBrokerage(IOrderProvider orderProvider, ISecurityProvider securityProvider)
         {
-            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.coinbase.com"));
-            var webSocketClient = new WebSocketClientWrapper();
-
             var securities = new SecurityManager(new TimeKeeper(DateTime.UtcNow, TimeZones.NewYork))
             {
                 {Symbol, CreateSecurity(Symbol)}
@@ -73,16 +70,15 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var priceProvider = new Mock<IPriceProvider>();
             priceProvider.Setup(a => a.GetLastPrice(It.IsAny<Symbol>())).Returns(1.234m);
 
-            var apiKey = Config.Get("gdax-api-key");
-            string apiSecret = Config.Get("gdax-api-secret");
-            string restApiUrl = Config.Get("coinbase-api-url");
+            var apiKey = Config.Get("coinbase-api-key");
+            var apiSecret = Config.Get("coinbase-api-secret");
+            var restApiUrl = Config.Get("coinbase-api-url");
+            var webSocketUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
 
             _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
 
-            var aggregator = new AggregationManager();
-            return new GDAXBrokerage(Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com"), webSocketClient, restClient,
-                apiKey, apiSecret, restApiUrl, algorithm.Object,
-                priceProvider.Object, aggregator, null);
+            return new GDAXBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, 
+                priceProvider.Object, new AggregationManager(), null);
         }
 
         /// <summary>

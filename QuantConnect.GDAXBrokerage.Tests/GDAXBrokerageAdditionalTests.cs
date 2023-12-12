@@ -113,11 +113,9 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
         private static TestGDAXDataQueueHandler GetDataQueueHandler()
         {
-            var wssUrl = Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com");
-            var webSocketClient = new WebSocketClientWrapper();
-            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
-            var apiKey = Config.Get("gdax-api-key");
-            var apiSecret = Config.Get("gdax-api-secret");
+            var wssUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
+            var apiKey = Config.Get("coinbase-api-key");
+            var apiSecret = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-api-url");
             var algorithm = new QCAlgorithm();
             var userId = Config.GetInt("job-user-id");
@@ -125,16 +123,14 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var priceProvider = new ApiPriceProvider(userId, userToken);
             var aggregator = new AggregationManager();
 
-            return new TestGDAXDataQueueHandler(wssUrl, webSocketClient, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
+            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
         }
 
         private static TestGDAXDataQueueHandler GetBrokerage()
         {
-            var wssUrl = Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com");
-            var webSocketClient = new WebSocketClientWrapper();
-            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.coinbase.com"));
-            var apiKey = Config.Get("gdax-api-key");
-            var apiSecret = Config.Get("gdax-api-secret");
+            var wssUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
+            var apiKey = Config.Get("coinbase-api-key");
+            var apiSecret = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-api-url");
             var algorithm = new QCAlgorithm();
             var userId = Config.GetInt("job-user-id");
@@ -142,12 +138,12 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var priceProvider = new ApiPriceProvider(userId, userToken);
             var aggregator = new AggregationManager();
 
-            return new TestGDAXDataQueueHandler(wssUrl, webSocketClient, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
+            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
         }
 
-        private class TestGDAXDataQueueHandler : GDAXDataQueueHandler
+        private class TestGDAXDataQueueHandler : GDAXBrokerage
         {
-            public TestGDAXDataQueueHandler(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey,
+            public TestGDAXDataQueueHandler(string wssUrl, string apiKey,
                 string apiSecret,
                 string restApiUrl,
                 IAlgorithm algorithm,
@@ -155,7 +151,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                 IDataAggregator aggregator,
                 LiveNodePacket job
                 )
-                : base(wssUrl, websocket, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, job)
+                : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, job)
             {
             }
 

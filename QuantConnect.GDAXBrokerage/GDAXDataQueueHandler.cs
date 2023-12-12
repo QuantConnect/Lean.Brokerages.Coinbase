@@ -13,13 +13,12 @@
  * limitations under the License.
 */
 
-using QuantConnect.Configuration;
-using QuantConnect.Data;
-using QuantConnect.Interfaces;
-using QuantConnect.Packets;
-using QuantConnect.Util;
-using RestSharp;
 using System;
+using QuantConnect.Util;
+using QuantConnect.Data;
+using QuantConnect.Packets;
+using QuantConnect.Interfaces;
+using QuantConnect.Configuration;
 using System.Collections.Generic;
 
 namespace QuantConnect.Brokerages.GDAX
@@ -27,41 +26,15 @@ namespace QuantConnect.Brokerages.GDAX
     /// <summary>
     /// An implementation of <see cref="IDataQueueHandler"/> for GDAX
     /// </summary>
-    [BrokerageFactory(typeof(GDAXBrokerageFactory))]
-    public class GDAXDataQueueHandler : GDAXBrokerage, IDataQueueHandler
+    public partial class GDAXBrokerage : IDataQueueHandler
     {
         /// <summary>
-        /// Constructor for brokerage
+        /// Data Aggregator
         /// </summary>
-        public GDAXDataQueueHandler() : base("GDAX")
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="GDAXDataQueueHandler"/> class
-        /// </summary>
-        public GDAXDataQueueHandler(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
-            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
-            : base(wssUrl, websocket, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, job)
-        {
-            Initialize(
-                wssUrl: wssUrl,
-                websocket: websocket,
-                restClient: restClient,
-                apiKey: apiKey,
-                apiSecret: apiSecret,
-                restApiUrl: restApiUrl,
-                algorithm: algorithm,
-                priceProvider: priceProvider,
-                aggregator: aggregator,
-                job: job
-            );
-        }
-
-        /// <summary>
-        /// The list of websocket channels to subscribe
-        /// </summary>
-        protected override string[] ChannelNames { get; } = { "heartbeat", "level2", "matches" };
+        /// <remarks>
+        /// Aggregates ticks and bars
+        /// </remarks>
+        protected IDataAggregator _aggregator;
 
         /// <summary>
         /// Subscribe to the specified configuration
@@ -83,42 +56,6 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         /// <summary>
-        /// Sets the job we're subscribing for
-        /// </summary>
-        /// <param name="job">Job we're subscribing for</param>
-        public void SetJob(LiveNodePacket job)
-        {
-            var wssUrl = job.BrokerageData["gdax-url"];
-            var restApi = job.BrokerageData["gdax-rest-api"];
-            var restClient = new RestClient(restApi);
-            var webSocketClient = new WebSocketClientWrapper();
-            var apiKey = job.BrokerageData["gdax-api-key"];
-            var apiSecret = job.BrokerageData["gdax-api-secret"];
-            var restApiUrl = job.BrokerageData["coinbase-api-url"];
-            var priceProvider = new ApiPriceProvider(job.UserId, job.UserToken);
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
-                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
-
-            Initialize(
-                wssUrl: wssUrl,
-                websocket: webSocketClient,
-                restClient: restClient,
-                apiKey: apiKey,
-                apiSecret: apiSecret,
-                restApiUrl: restApiUrl,
-                algorithm: null,
-                priceProvider: priceProvider,
-                aggregator: aggregator,
-                job: job
-            );
-
-            if (!IsConnected)
-            {
-                Connect();
-            }
-        }
-
-        /// <summary>
         /// Removes the specified configuration
         /// </summary>
         /// <param name="dataConfig">Subscription config to be removed</param>
@@ -129,19 +66,29 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         /// <summary>
-        /// Checks if this brokerage supports the specified symbol
+        /// Sets the job we're subscribing for
         /// </summary>
-        /// <param name="symbol">The symbol</param>
-        /// <returns>returns true if brokerage supports the specified symbol; otherwise false</returns>
-        private static bool CanSubscribe(Symbol symbol)
+        /// <param name="job">Job we're subscribing for</param>
+        public void SetJob(LiveNodePacket job)
         {
-            if (symbol.Value.Contains("UNIVERSE") ||
-                symbol.SecurityType != SecurityType.Forex && symbol.SecurityType != SecurityType.Crypto)
-            {
-                return false;
-            }
+            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
+                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
 
-            return symbol.ID.Market == Market.GDAX;
+            Initialize(
+                webSocketUrl: job.BrokerageData["coinbase-websocket-url"],
+                apiKey: job.BrokerageData["coinbase-api-key"],
+                apiSecret: job.BrokerageData["coinbase-api-secret"],
+                restApiUrl: job.BrokerageData["coinbase-api-url"],
+                algorithm: null,
+                priceProvider: new ApiPriceProvider(job.UserId, job.UserToken),
+                aggregator: aggregator,
+                job: job
+            );
+
+            if (!IsConnected)
+            {
+                Connect();
+            }
         }
     }
 }

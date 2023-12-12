@@ -13,109 +13,54 @@
  * limitations under the License.
 */
 
-using Newtonsoft.Json;
-using QuantConnect.CoinbaseBrokerage.Api;
-using QuantConnect.Configuration;
-using QuantConnect.Data;
-using QuantConnect.Data.Market;
-using QuantConnect.Interfaces;
-using QuantConnect.Logging;
-using QuantConnect.Orders;
-using QuantConnect.Orders.Fees;
-using QuantConnect.Packets;
-using QuantConnect.Securities;
-using QuantConnect.Util;
-using RestSharp;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
+using Newtonsoft.Json;
 using System.Threading;
+using QuantConnect.Util;
+using QuantConnect.Orders;
+using QuantConnect.Logging;
+using System.Globalization;
 using System.Threading.Tasks;
+using QuantConnect.Interfaces;
+using QuantConnect.Securities;
+using QuantConnect.Orders.Fees;
+using QuantConnect.Data.Market;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace QuantConnect.Brokerages.GDAX
 {
     public partial class GDAXBrokerage
     {
-        private CoinbaseApi _coinbaseApi;
-        private SymbolPropertiesDatabaseSymbolMapper _symbolMapper;
+        /// <summary>
+        /// Represents a collection of order books associated with symbols in a thread-safe manner.
+        /// </summary>
+        private readonly ConcurrentDictionary<Symbol, DefaultOrderBook> _orderBooks = new();
+
+        /// <summary>
+        /// Represents a rate limiter for controlling the frequency of WebSocket operations.
+        /// </summary>
+        /// <see cref="https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-rate-limits"/>
+        private RateGate _webSocketRateLimit = new(750, TimeSpan.FromSeconds(1));
 
         /// <summary>
         /// Collection of partial split messages
         /// </summary>
         public ConcurrentDictionary<long, GDAXFill> FillSplit { get; set; }
 
-        private IAlgorithm _algorithm;
         private readonly CancellationTokenSource _canceller = new CancellationTokenSource();
-        private readonly ConcurrentDictionary<Symbol, DefaultOrderBook> _orderBooks = new ConcurrentDictionary<Symbol, DefaultOrderBook>();
-        private bool _isDataQueueHandler;
-        private LiveNodePacket _job;
-        private RateGate _websocketRateLimit = new(7, TimeSpan.FromSeconds(1));
-
-        /// <summary>
-        /// Data Aggregator
-        /// </summary>
-        protected IDataAggregator _aggregator;
-
-        // GDAX has different rate limits for public and private endpoints
-        // https://docs.gdax.com/#rate-limits
-        internal enum GdaxEndpointType { Public, Private }
-
-        private readonly RateGate _publicEndpointRateLimiter = new RateGate(6, TimeSpan.FromSeconds(1));
-        private readonly RateGate _privateEndpointRateLimiter = new RateGate(10, TimeSpan.FromSeconds(1));
 
         private IPriceProvider _priceProvider;
 
         private readonly CancellationTokenSource _ctsFillMonitor = new CancellationTokenSource();
-        private Task _fillMonitorTask;
-        private readonly AutoResetEvent _fillMonitorResetEvent = new AutoResetEvent(false);
-        private readonly int _fillMonitorTimeout = Config.GetInt("gdax-fill-monitor-timeout", 500);
-        private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new ConcurrentDictionary<string, PendingOrder>();
+
+        private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new();
 
         /// <summary>
-        /// The list of websocket channels to subscribe
+        /// The list of WebSocket channels to subscribe
         /// </summary>
-        protected virtual string[] ChannelNames { get; } = { "heartbeat" };
-
-        /// <summary>
-        /// Constructor for brokerage
-        /// </summary>
-        /// <param name="name">Name of brokerage</param>
-        public GDAXBrokerage(string name) : base(name)
-        {
-        }
-
-        /// <summary>
-        /// Constructor for brokerage
-        /// </summary>
-        /// <param name="wssUrl">websockets url</param>
-        /// <param name="websocket">instance of websockets client</param>
-        /// <param name="restClient">instance of rest client</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
-        /// <param name="algorithm">the algorithm instance is required to retreive account type</param>
-        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
-        /// <param name="aggregator">consolidate ticks</param>
-        /// <param name="job">The live job packet</param>
-        public GDAXBrokerage(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
-            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
-            : base("GDAX")
-        {
-            Initialize(
-                wssUrl: wssUrl,
-                websocket: websocket,
-                restClient: restClient,
-                apiKey: apiKey,
-                apiSecret: apiSecret,
-                restApiUrl: restApiUrl,
-                algorithm: algorithm,
-                priceProvider: priceProvider,
-                aggregator: aggregator,
-                job: job
-            );
-        }
+        private string[] ChannelNames { get; } = { "heartbeat", "level2", "matches" };
 
         /// <summary>
         /// Wss message handler
@@ -177,52 +122,6 @@ namespace QuantConnect.Brokerages.GDAX
             }
         }
 
-        /// <summary>
-        /// Initialize the instance of this class
-        /// </summary>
-        /// <param name="wssUrl">The web socket base url</param>
-        /// <param name="websocket">instance of websockets client</param>
-        /// <param name="restClient">instance of rest client</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
-        /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
-        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
-        /// <param name="aggregator">the aggregator for consolidating ticks</param>
-        /// <param name="job">The live job packet</param>
-        protected void Initialize(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
-            string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
-        {
-            if (IsInitialized)
-            {
-                return;
-            }
-            Initialize(wssUrl, websocket, restClient, apiKey, apiSecret);
-            _job = job;
-            FillSplit = new ConcurrentDictionary<long, GDAXFill>();
-            _algorithm = algorithm;
-            _priceProvider = priceProvider;
-            _aggregator = aggregator;
-
-            _isDataQueueHandler = this is GDAXDataQueueHandler;
-
-            _fillMonitorTask = Task.Factory.StartNew(FillMonitorAction, _ctsFillMonitor.Token);
-
-            var subscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager();
-            subscriptionManager.SubscribeImpl += (s, t) =>
-            {
-                Subscribe(s);
-                return true;
-            };
-            subscriptionManager.UnsubscribeImpl += (s, t) => Unsubscribe(s);
-
-            SubscriptionManager = subscriptionManager;
-
-            _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
-            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
-
-            ValidateSubscription();
-        }
-
         private void OnSnapshot(string data)
         {
             try
@@ -258,10 +157,7 @@ namespace QuantConnect.Brokerages.GDAX
 
                 orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
 
-                if (_isDataQueueHandler)
-                {
-                    EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
-                }
+                EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
             }
             catch (Exception e)
             {
@@ -272,10 +168,7 @@ namespace QuantConnect.Brokerages.GDAX
 
         private void OnBestBidAskUpdated(object sender, BestBidAskUpdatedEventArgs e)
         {
-            if (_isDataQueueHandler)
-            {
-                EmitQuoteTick(e.Symbol, e.BestBidPrice, e.BestBidSize, e.BestAskPrice, e.BestAskSize);
-            }
+            EmitQuoteTick(e.Symbol, e.BestBidPrice, e.BestBidSize, e.BestAskPrice, e.BestAskSize);
         }
 
         private void OnL2Update(string data)
@@ -330,10 +223,7 @@ namespace QuantConnect.Brokerages.GDAX
             var message = JsonConvert.DeserializeObject<Messages.Matched>(data, JsonSettings);
 
             // message received from the "matches" channel
-            if (_isDataQueueHandler)
-            {
-                EmitTradeTick(message);
-            }
+            EmitTradeTick(message);
         }
 
         private void EmitFillOrderEvent(Messages.Fill fill, Order order)
@@ -389,26 +279,6 @@ namespace QuantConnect.Brokerages.GDAX
             }
 
             OnOrderEvent(orderEvent);
-        }
-
-        /// <summary>
-        /// Retrieves a price tick for a given symbol
-        /// </summary>
-        /// <param name="symbol"></param>
-        /// <returns></returns>
-        public Tick GetTick(Symbol symbol)
-        {
-            var brokerageSymbol = _symbolMapper.GetBrokerageSymbol(symbol);
-
-            var req = new RestRequest($"/products/{brokerageSymbol}/ticker", Method.GET);
-            var response = ExecuteRestRequest(req, GdaxEndpointType.Public);
-            if (response.StatusCode != HttpStatusCode.OK)
-            {
-                throw new Exception($"GDAXBrokerage.GetTick: request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
-            }
-
-            var tick = JsonConvert.DeserializeObject<Messages.Tick>(response.Content);
-            return new Tick(tick.Time, symbol, tick.Bid, tick.Ask) { Quantity = tick.Volume };
         }
 
         /// <summary>
@@ -504,7 +374,7 @@ namespace QuantConnect.Brokerages.GDAX
                 signature = token.Signature,
             });
 
-            _websocketRateLimit.WaitToProceed();
+            _webSocketRateLimit.WaitToProceed();
 
             WebSocket.Send(json);
 
@@ -582,69 +452,11 @@ namespace QuantConnect.Brokerages.GDAX
                     product_ids = products
                 };
 
-                _websocketRateLimit.WaitToProceed();
+                _webSocketRateLimit.WaitToProceed();
 
                 WebSocket.Send(JsonConvert.SerializeObject(payload));
             }
             return true;
-        }
-
-        private void FillMonitorAction()
-        {
-            Log.Trace("GDAXBrokerage.FillMonitorAction(): task started");
-
-            try
-            {
-                foreach (var order in GetOpenOrders())
-                {
-                    _pendingOrders.TryAdd(order.BrokerId.First(), new PendingOrder(order));
-                }
-
-                while (!_ctsFillMonitor.IsCancellationRequested)
-                {
-                    _fillMonitorResetEvent.WaitOne(TimeSpan.FromMilliseconds(_fillMonitorTimeout), _ctsFillMonitor.Token);
-
-                    foreach (var kvp in _pendingOrders)
-                    {
-                        var orderId = kvp.Key;
-                        var pendingOrder = kvp.Value;
-
-                        var request = new RestRequest($"/fills?order_id={orderId}", Method.GET);
-                        GetAuthenticationToken(request);
-
-                        var response = new RestResponse();
-
-                        if (response.StatusCode != HttpStatusCode.OK)
-                        {
-                            OnMessage(new BrokerageMessageEvent(
-                                BrokerageMessageType.Warning,
-                                -1,
-                                $"GDAXBrokerage.FillMonitorAction(): request failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}"));
-
-                            continue;
-                        }
-
-                        var fills = JsonConvert.DeserializeObject<List<Messages.Fill>>(response.Content);
-                        foreach (var fill in fills.OrderBy(x => x.TradeId))
-                        {
-                            if (fill.TradeId <= pendingOrder.LastEmittedFillTradeId)
-                            {
-                                continue;
-                            }
-
-                            EmitFillOrderEvent(fill, pendingOrder.Order);
-
-                            pendingOrder.LastEmittedFillTradeId = fill.TradeId;
-                        }
-                    }
-                }
-            }
-            catch (Exception exception)
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, exception.Message));
-            }
-
-            Log.Trace("GDAXBrokerage.FillMonitorAction(): task ended");
         }
 
         private class PendingOrder

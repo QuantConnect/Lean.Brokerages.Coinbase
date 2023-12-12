@@ -13,42 +13,149 @@
  * limitations under the License.
 */
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using QuantConnect.Api;
-using QuantConnect.Configuration;
-using QuantConnect.Data;
-using QuantConnect.Data.Market;
-using QuantConnect.Logging;
-using QuantConnect.Orders;
-using QuantConnect.Orders.Fees;
-using QuantConnect.Securities;
-using QuantConnect.Util;
-using RestSharp;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
+using RestSharp;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
-using System.Security.Cryptography;
+using System.Linq;
 using System.Text;
-using QuantConnect.CoinbaseBrokerage.Models;
+using Newtonsoft.Json;
+using QuantConnect.Api;
+using QuantConnect.Data;
+using QuantConnect.Util;
+using QuantConnect.Orders;
+using Newtonsoft.Json.Linq;
+using QuantConnect.Logging;
+using System.Globalization;
+using QuantConnect.Packets;
+using QuantConnect.Securities;
+using QuantConnect.Interfaces;
+using QuantConnect.Orders.Fees;
+using QuantConnect.Data.Market;
+using System.Collections.Generic;
+using QuantConnect.Configuration;
+using System.Security.Cryptography;
+using System.Collections.Concurrent;
+using System.Net.NetworkInformation;
+using QuantConnect.CoinbaseBrokerage.Api;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.Brokerages.GDAX
 {
+    /// <summary>
+    /// Represents a partial class for interacting with the GDAX brokerage using WebSocket communication.
+    /// </summary>
+    [BrokerageFactory(typeof(GDAXBrokerageFactory))]
     public partial class GDAXBrokerage : BaseWebsocketsBrokerage
     {
-        private const int MaxDataPointsPerHistoricalRequest = 300;
-
-        #region IBrokerage
         /// <summary>
-        /// Checks if the websocket connection is connected or in the process of connecting
+        /// Live job task packet: container for any live specific job variables
+        /// </summary>
+        private LiveNodePacket _job;
+
+        /// <summary>
+        /// Provide data from external algorithm
+        /// </summary>
+        private IAlgorithm _algorithm;
+
+        /// <summary>
+        /// Represents an instance of the Coinbase API.
+        /// </summary>
+        private CoinbaseApi _coinbaseApi;
+
+        /// <summary>
+        ///  Provides the mapping between Lean symbols and brokerage symbols
+        /// </summary>
+        private SymbolPropertiesDatabaseSymbolMapper _symbolMapper;
+
+        /// <summary>
+        /// Represents the name of the market associated with the application.
+        /// </summary>
+        private static readonly string MarketName = Market.GDAX;
+
+        /// <summary>
+        /// Checks if the WebSocket connection is connected or in the process of connecting
         /// </summary>
         public override bool IsConnected => WebSocket.IsOpen;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GDAXBrokerage"/> class with the specified name.
+        /// </summary>
+        /// <param name="name">The name associated with the Coinbase brokerage instance.</param>
+        public GDAXBrokerage(string name) : base(name)
+        { }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GDAXBrokerage"/> class with set of parameters.
+        /// </summary>
+        /// <param name="webSocketUrl">WebSockets url</param>
+        /// <param name="apiKey">api key</param>
+        /// <param name="apiSecret">api secret</param>
+        /// <param name="restApiUrl">api secret</param>
+        /// <param name="algorithm">the algorithm instance is required to retreive account type</param>
+        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
+        /// <param name="aggregator">consolidate ticks</param>
+        /// <param name="job">The live job packet</param>
+        public GDAXBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+            IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+            : base(MarketName)
+        {
+            Initialize(
+                webSocketUrl: webSocketUrl,
+                apiKey: apiKey,
+                apiSecret: apiSecret,
+                restApiUrl: restApiUrl,
+                algorithm: algorithm,
+                priceProvider: priceProvider,
+                aggregator: aggregator,
+                job: job
+            );
+        }
+
+        /// <summary>
+        /// Initialize the instance of this class
+        /// </summary>
+        /// <param name="webSocketUrl">The web socket base url</param>
+        /// <param name="apiKey">api key</param>
+        /// <param name="apiSecret">api secret</param>
+        /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
+        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
+        /// <param name="aggregator">the aggregator for consolidating ticks</param>
+        /// <param name="job">The live job packet</param>
+        protected void Initialize(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+            IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+        {
+            if (IsInitialized)
+            {
+                return;
+            }
+
+            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
+
+            _job = job;
+            _algorithm = algorithm;
+            _aggregator = aggregator;
+            _priceProvider = priceProvider;
+            _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
+            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
+
+            FillSplit = new ConcurrentDictionary<long, GDAXFill>();
+
+            var subscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager();
+
+            subscriptionManager.SubscribeImpl += (s, t) =>
+            {
+                Subscribe(s);
+                return true;
+            };
+            subscriptionManager.UnsubscribeImpl += (s, t) => Unsubscribe(s);
+
+            SubscriptionManager = subscriptionManager;
+
+            // ValidateSubscription();
+        }
+
+        #region IBrokerage
         /// <summary>
         /// Creates a new order
         /// </summary>
@@ -58,39 +165,38 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var response = _coinbaseApi.CreateOrder(order);
 
-            if(!response.Success)
+            if (!response.Success)
             {
-                var errorMessage = 
-                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UNKNOWN_FAILURE_REASON 
+                var errorMessage =
+                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UNKNOWN_FAILURE_REASON
                     ? response.ErrorResponse.Value.PreviewFailureReason : response.ErrorResponse.Value.Error.ToString();
-                OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event") 
+                OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
                 { Status = OrderStatus.Invalid, Message = errorMessage });
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage));
                 return false;
             }
 
-            // TODO: Why did we use this ?
-            //var brokerId = raw.Id;
+            //TODO: Why did we use this ?
             //if (CachedOrderIDs.ContainsKey(order.Id))
             //{
-            //    CachedOrderIDs[order.Id].BrokerId.Add(brokerId);
+            //    CachedOrderIDs[order.Id].BrokerId.Add(response.OrderId);
             //}
             //else
             //{
-            //    order.BrokerId.Add(brokerId);
+            //    order.BrokerId.Add(response.OrderId);
             //    CachedOrderIDs.TryAdd(order.Id, order);
             //}
 
             //// Add fill splits in all cases; we'll need to handle market fills too.
             //FillSplit.TryAdd(order.Id, new GDAXFill(order));
 
-            //_pendingOrders.TryAdd(brokerId, new PendingOrder(order));
-            //_fillMonitorResetEvent.Set();
+            //_pendingOrders.TryAdd(response.OrderId, new PendingOrder(order));
 
             order.BrokerId.Add(response.OrderId);
 
-            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, 
-                "CoinbaseBrokerage Order Event") { Status = OrderStatus.Submitted });
+            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero,
+                "CoinbaseBrokerage Order Event")
+            { Status = OrderStatus.Submitted });
 
             return true;
         }
@@ -247,7 +353,7 @@ namespace QuantConnect.Brokerages.GDAX
 
             foreach (var item in accounts)
             {
-                if(item.AvailableBalance.Value > 0m)
+                if (item.AvailableBalance.Value > 0m)
                 {
                     list.Add(new CashAmount(item.AvailableBalance.Value, item.AvailableBalance.Currency));
                 }
@@ -261,7 +367,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// </summary>
         /// <param name="request">The historical data request</param>
         /// <returns>An enumerable of bars covering the span specified in the request</returns>
-        public override IEnumerable<BaseData> GetHistory(HistoryRequest request)
+        public override IEnumerable<BaseData> GetHistory(Data.HistoryRequest request)
         {
             // GDAX API only allows us to support history requests for TickType.Trade
             if (request.TickType != TickType.Trade)
@@ -302,14 +408,14 @@ namespace QuantConnect.Brokerages.GDAX
         /// Returns TradeBars from GDAX candles (only for Minute/Hour/Daily resolutions)
         /// </summary>
         /// <param name="request">The history request instance</param>
-        private IEnumerable<TradeBar> GetHistoryFromCandles(HistoryRequest request)
+        private IEnumerable<TradeBar> GetHistoryFromCandles(Data.HistoryRequest request)
         {
             var productId = _symbolMapper.GetBrokerageSymbol(request.Symbol);
             var granularity = Convert.ToInt32(request.Resolution.ToTimeSpan().TotalSeconds);
 
             var startTime = request.StartTimeUtc;
             var endTime = request.EndTimeUtc;
-            var maximumRange = TimeSpan.FromSeconds(MaxDataPointsPerHistoricalRequest * granularity);
+            var maximumRange = TimeSpan.FromSeconds(300 * granularity);
 
             do
             {
@@ -386,6 +492,18 @@ namespace QuantConnect.Brokerages.GDAX
             }
         }
 
+        /// <summary>
+        /// Checks if this brokerage supports the specified symbol
+        /// </summary>
+        /// <param name="symbol">The symbol</param>
+        /// <returns>returns true if brokerage supports the specified symbol; otherwise false</returns>
+        protected virtual bool CanSubscribe(Symbol symbol)
+        {
+            return !symbol.Value.Contains("UNIVERSE") &&
+                symbol.SecurityType == SecurityType.Crypto &&
+                symbol.ID.Market == MarketName;
+        }
+
         #endregion
 
         /// <summary>
@@ -394,19 +512,15 @@ namespace QuantConnect.Brokerages.GDAX
         public override void Dispose()
         {
             _ctsFillMonitor.Cancel();
-            _fillMonitorTask.Wait(TimeSpan.FromSeconds(5));
 
             _canceller.DisposeSafely();
             _aggregator.DisposeSafely();
 
-            _publicEndpointRateLimiter.Dispose();
-            _privateEndpointRateLimiter.Dispose();
-
-            _websocketRateLimit.DisposeSafely();
+            _webSocketRateLimit.DisposeSafely();
         }
 
         #region Utils
-        
+
         private TimeInForce ConvertTimeInForce(BrokerageEnums.TimeInForce timeInForce, DateTime expiryDate = default)
         {
             switch (timeInForce)

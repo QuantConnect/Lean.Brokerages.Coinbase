@@ -101,7 +101,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                     StatusCode = HttpStatusCode.OK
                 });
 
-            _unit = new GDAXFakeDataQueueHandler("wss://localhost", _wss.Object, _rest.Object, "abc", "MTIz", "http://localhost", _algo.Object, priceProvider.Object, new AggregationManager());
+            _unit = new GDAXFakeDataQueueHandler("wss://localhost", "abc", "MTIz", "http://localhost", _algo.Object, priceProvider.Object, new AggregationManager());
 
             _fillData = File.ReadAllText("TestData//gdax_fill.txt");
             _openOrderData = File.ReadAllText("TestData//gdax_openOrders.txt");
@@ -407,13 +407,11 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                 false);
         }
 
-        private class GDAXFakeDataQueueHandler : GDAXDataQueueHandler
+        private class GDAXFakeDataQueueHandler : GDAXBrokerage
         {
-            protected override string[] ChannelNames => new[] { "heartbeat", "user" };
-
-            public GDAXFakeDataQueueHandler(string wssUrl, IWebSocket websocket, IRestClient restClient, string apiKey, string apiSecret,
+            public GDAXFakeDataQueueHandler(string wssUrl, string apiKey, string apiSecret,
                 string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator)
-            : base(wssUrl, websocket, restClient, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null)
+            : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null)
             {
             }
 

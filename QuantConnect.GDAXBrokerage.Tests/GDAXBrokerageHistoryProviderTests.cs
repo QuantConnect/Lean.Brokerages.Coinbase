@@ -14,19 +14,17 @@
 */
 
 using System;
-using System.Linq;
 using NodaTime;
+using System.Linq;
 using NUnit.Framework;
-using QuantConnect.Brokerages;
-using QuantConnect.Brokerages.GDAX;
-using QuantConnect.Configuration;
 using QuantConnect.Data;
-using QuantConnect.Data.Market;
-using QuantConnect.Lean.Engine.DataFeeds;
-using QuantConnect.Lean.Engine.HistoricalData;
 using QuantConnect.Logging;
 using QuantConnect.Securities;
-using RestSharp;
+using QuantConnect.Data.Market;
+using QuantConnect.Configuration;
+using QuantConnect.Brokerages.GDAX;
+using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.Lean.Engine.HistoricalData;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
@@ -36,13 +34,11 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         [Test, TestCaseSource(nameof(TestParameters))]
         public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool shouldBeEmpty)
         {
-            var restClient = new RestClient(Config.Get("gdax-rest-api", "https://api.pro.coinbase.com"));
-            var webSocketClient = new WebSocketClientWrapper();
             var aggregator = new AggregationManager();
 
             var brokerage = new GDAXBrokerage(
-                Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com"), webSocketClient, restClient,
-                Config.Get("gdax-api-key"), Config.Get("gdax-api-secret"), Config.Get("coinbase-api-url"), null, null, aggregator, null);
+                Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com"),
+                Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-api-url"), null, null, aggregator, null);
 
             var historyProvider = new BrokerageHistoryProvider();
             historyProvider.SetBrokerage(brokerage);

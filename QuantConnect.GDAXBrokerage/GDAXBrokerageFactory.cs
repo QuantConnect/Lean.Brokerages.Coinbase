@@ -14,53 +14,48 @@
 */
 
 using System;
-using System.Collections.Generic;
-using QuantConnect.Configuration;
 using QuantConnect.Data;
+using QuantConnect.Util;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
-using QuantConnect.Util;
-using RestSharp;
+using QuantConnect.Configuration;
+using System.Collections.Generic;
 
 namespace QuantConnect.Brokerages.GDAX
 {
     /// <summary>
-    /// Factory method to create GDAX Websockets brokerage
+    /// Factory method to create Coinbase WebSockets brokerage
     /// </summary>
     public class GDAXBrokerageFactory : BrokerageFactory
     {
         /// <summary>
-        /// Factory constructor
+        /// Gets the brokerage data required to run the brokerage from configuration/disk
         /// </summary>
-        public GDAXBrokerageFactory() : base(typeof(GDAXBrokerage))
-        {
-        }
-
-        /// <summary>
-        /// Not required
-        /// </summary>
-        public override void Dispose()
-        {
-        }
-
-        /// <summary>
-        /// provides brokerage connection data
-        /// </summary>
+        /// <remarks>
+        /// The implementation of this property will create the brokerage data dictionary required for
+        /// running live jobs. See <see cref="IJobQueueHandler.NextJob"/>
+        /// </remarks>
         public override Dictionary<string, string> BrokerageData => new Dictionary<string, string>
         {
-            // Sandbox environment for paper trading available using 'wss://ws-feed-public.sandbox.pro.coinbase.com'
-            { "gdax-url" , Config.Get("gdax-url", "wss://ws-feed.pro.coinbase.com")},
-            // Sandbox environment for paper trading available using 'https://api-public.sandbox.pro.coinbase.com'
-            { "gdax-rest-api", Config.Get("gdax-rest-api", "https://api.pro.coinbase.com")},
-            { "gdax-api-secret", Config.Get("gdax-api-secret")},
-            { "gdax-api-key", Config.Get("gdax-api-key")},
-
+            { "coinbase-api-key", Config.Get("coinbase-api-key")},
+            { "coinbase-api-secret", Config.Get("coinbase-api-secret")},
+            // Represents the configuration setting for the Coinbase API URL.
+            { "coinbase-api-url", Config.Get("coinbase-api-url", "https://api.coinbase.com")},
+            // Represents the configuration setting for the Coinbase WebSocket URL.
+            { "coinbase-websocket-url" , Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com")},
             // load holdings if available
             { "live-holdings", Config.Get("live-holdings")},
         };
 
+
         /// <summary>
-        /// The brokerage model
+        /// Initializes a new instance of the <see cref="GDAXBrokerageFactory"/> class
+        /// </summary>
+        public GDAXBrokerageFactory() : base(typeof(GDAXBrokerage))
+        { }
+
+        /// <summary>
+        /// Gets a brokerage model that can be used to model this brokerage's unique behaviors
         /// </summary>
         /// <param name="orderProvider">The order provider</param>
         public override IBrokerageModel GetBrokerageModel(IOrderProvider orderProvider) => new GDAXBrokerageModel();
@@ -73,44 +68,35 @@ namespace QuantConnect.Brokerages.GDAX
         /// <returns></returns>
         public override IBrokerage CreateBrokerage(Packets.LiveNodePacket job, IAlgorithm algorithm)
         {
-            var required = new[] { "gdax-url", "gdax-api-secret", "gdax-api-key" };
+            var errors = new List<string>();
+            var apiKey = Read<string>(job.BrokerageData, "coinbase-api-key", errors);
+            var apiSecret = Read<string>(job.BrokerageData, "coinbase-api-secret", errors);
+            var apiUrl = Read<string>(job.BrokerageData, "coinbase-api-url", errors);
+            var wsUrl = Read<string>(job.BrokerageData, "coinbase-websocket-url", errors);
 
-            foreach (var item in required)
+            if (errors.Count != 0)
             {
-                if (string.IsNullOrEmpty(job.BrokerageData[item]))
-                    throw new Exception($"GDAXBrokerageFactory.CreateBrokerage: Missing {item} in config.json");
+                // if we had errors then we can't create the instance
+                throw new ArgumentException(string.Join(Environment.NewLine, errors));
             }
 
-            var restApi = BrokerageData["gdax-rest-api"];
-            if (job.BrokerageData.ContainsKey("gdax-rest-api"))
-            {
-                restApi = job.BrokerageData["gdax-rest-api"];
-            }
-
-            var restClient = new RestClient(restApi);
-            var webSocketClient = new WebSocketClientWrapper();
             var priceProvider = new ApiPriceProvider(job.UserId, job.UserToken);
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
+            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
+                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
+                forceTypeNameOnExisting: false);
 
-            IBrokerage brokerage;
-            if (job.DataQueueHandler.Contains("GDAXDataQueueHandler"))
-            {
-                var dataQueueHandler = new GDAXDataQueueHandler(job.BrokerageData["gdax-url"], webSocketClient,
-                    restClient, job.BrokerageData["gdax-api-key"], job.BrokerageData["gdax-api-secret"],
-                    job.BrokerageData["coinbase-api-url"], algorithm, priceProvider, aggregator, job);
+            var brokerage = new GDAXBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, priceProvider, aggregator, job);
 
-                Composer.Instance.AddPart<IDataQueueHandler>(dataQueueHandler);
-
-                brokerage = dataQueueHandler;
-            }
-            else
-            {
-                brokerage = new GDAXBrokerage(job.BrokerageData["gdax-url"], webSocketClient,
-                    restClient, job.BrokerageData["gdax-api-key"], job.BrokerageData["gdax-api-secret"],
-                    job.BrokerageData["coinbase-api-url"], algorithm, priceProvider, aggregator, job);
-            }
+            // Add the brokerage to the composer to ensure its accessible to the live data feed.
+            Composer.Instance.AddPart<IDataQueueHandler>(brokerage);
 
             return brokerage;
         }
+
+        /// <summary>
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// </summary>
+        public override void Dispose()
+        { }
     }
 }

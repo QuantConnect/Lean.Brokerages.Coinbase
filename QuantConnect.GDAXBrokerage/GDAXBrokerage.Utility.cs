@@ -48,26 +48,6 @@ namespace QuantConnect.Brokerages.GDAX
         private const string Settled = "settled";
 
         /// <summary>
-        /// Creates an auth token and adds to the request
-        /// </summary>
-        /// <param name="request">the rest request</param>
-        /// <returns>a token representing the request params</returns>
-        public AuthenticationToken GetAuthenticationToken(IRestRequest request)
-        {
-            var body = request.Parameters.SingleOrDefault(b => b.Type == ParameterType.RequestBody);
-
-            var url = RestClient.BuildUri(request).AbsolutePath;
-
-            var token = GetAuthenticationToken(body?.Value.ToString() ?? string.Empty, request.Method.ToString().ToUpperInvariant(), url);
-
-            request.AddHeader(KeyHeader, ApiKey);
-            request.AddHeader(SignHeader, token.Signature);
-            request.AddHeader(TimeHeader, token.Timestamp);
-
-            return token;
-        }
-
-        /// <summary>
         /// Creates an auth token to sign a request
         /// </summary>
         /// <param name="body">the request body as json</param>
