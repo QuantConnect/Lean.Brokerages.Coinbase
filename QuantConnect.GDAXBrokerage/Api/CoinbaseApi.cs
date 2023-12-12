@@ -117,7 +117,7 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseMarketTrades>(response.Content);
     }
 
-    public IRestResponse CreateOrder(Order leanOrder)
+    public CoinbaseCreateOrderResponse CreateOrder(Order leanOrder)
     {
         var placeOrderRequest = CreateRequest(leanOrder);
 
@@ -132,19 +132,17 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
-        return response;
+        return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
     }
 
     private CoinbaseCreateOrderRequest CreateRequest(Order leanOrder)
     {
         if (leanOrder.Direction == OrderDirection.Hold) throw new NotSupportedException();
 
-        var model = new CoinbaseCreateOrderRequest()
-        {
-            ClientOrderId = Guid.NewGuid(),
-            ProductId = SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
-            Side = leanOrder.Direction == OrderDirection.Buy ? OrderSide.BUY : OrderSide.SELL,
-        };
+        var model = new CoinbaseCreateOrderRequest(
+            Guid.Empty,
+            SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
+            leanOrder.Direction == OrderDirection.Buy ? OrderSide.BUY : OrderSide.SELL);
 
         switch (leanOrder)
         {

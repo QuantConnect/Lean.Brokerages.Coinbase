@@ -58,56 +58,35 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var response = _coinbaseApi.CreateOrder(order);
 
-            var orderFee = OrderFee.Zero;
-            if (response.StatusCode == HttpStatusCode.OK && response.Content != null)
+            if(!response.Success)
             {
-                var raw = JsonConvert.DeserializeObject<Messages.Order>(response.Content);
-
-                if (raw?.Id == null)
-                {
-                    var errorMessage = $"Error parsing response from place order: {response.Content}";
-                    OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, orderFee, "GDAX Order Event") { Status = OrderStatus.Invalid, Message = errorMessage });
-                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, (int)response.StatusCode, errorMessage));
-
-                    return true;
-                }
-
-                if (raw.Status == "rejected")
-                {
-                    var errorMessage = "Reject reason: " + raw.RejectReason;
-                    OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, orderFee, "GDAX Order Event") { Status = OrderStatus.Invalid, Message = errorMessage });
-                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, (int)response.StatusCode, errorMessage));
-
-                    return true;
-                }
-
-                var brokerId = raw.Id;
-                if (CachedOrderIDs.ContainsKey(order.Id))
-                {
-                    CachedOrderIDs[order.Id].BrokerId.Add(brokerId);
-                }
-                else
-                {
-                    order.BrokerId.Add(brokerId);
-                    CachedOrderIDs.TryAdd(order.Id, order);
-                }
-
-                // Add fill splits in all cases; we'll need to handle market fills too.
-                FillSplit.TryAdd(order.Id, new GDAXFill(order));
-
-                // Generate submitted event
-                OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, orderFee, "GDAX Order Event") { Status = OrderStatus.Submitted });
-                Log.Trace($"Order submitted successfully - OrderId: {order.Id}");
-
-                _pendingOrders.TryAdd(brokerId, new PendingOrder(order));
-                _fillMonitorResetEvent.Set();
-
-                return true;
+                var errorMessage = response.ErrorResponse.Value.PreviewFailureReason;
+                OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event") 
+                { Status = OrderStatus.Invalid, Message = errorMessage });
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage));
+                return false;
             }
 
-            var message = $"Order failed, Order Id: {order.Id} timestamp: {order.Time} quantity: {order.Quantity} content: {response.Content}";
-            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, orderFee, "GDAX Order Event") { Status = OrderStatus.Invalid });
-            OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, -1, message));
+            // TODO: Why did we use this ?
+            //var brokerId = raw.Id;
+            //if (CachedOrderIDs.ContainsKey(order.Id))
+            //{
+            //    CachedOrderIDs[order.Id].BrokerId.Add(brokerId);
+            //}
+            //else
+            //{
+            //    order.BrokerId.Add(brokerId);
+            //    CachedOrderIDs.TryAdd(order.Id, order);
+            //}
+
+            //// Add fill splits in all cases; we'll need to handle market fills too.
+            //FillSplit.TryAdd(order.Id, new GDAXFill(order));
+
+            //_pendingOrders.TryAdd(brokerId, new PendingOrder(order));
+            //_fillMonitorResetEvent.Set();
+
+            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, 
+                "CoinbaseBrokerage Order Event") { Status = OrderStatus.Submitted });
 
             return true;
         }
