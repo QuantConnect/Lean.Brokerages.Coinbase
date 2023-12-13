@@ -20,6 +20,7 @@ using System.Linq;
 using QuantConnect.Util;
 using System.Diagnostics;
 using System.Globalization;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace QuantConnect.CoinbaseBrokerage.Api;
@@ -105,7 +106,18 @@ public class CoinbaseApiClient : IDisposable
 
         var sig = _hmacSha256.ComputeHash(Encoding.UTF8.GetBytes(preHash));
 
-        return Convert.ToHexString(sig).ToLower();
+        return Convert.ToHexString(sig).ToLowerInvariant();
+    }
+
+    public (string apiKey, string timestamp, string signature) GenerateWebSocketSignature(string channel, ICollection<string> productIds)
+    {
+        var timestamp = GetNonce();
+
+        var products = string.Join(",", productIds ?? Array.Empty<string>());
+
+        var signature = GetSign(timestamp, string.Empty, channel, products);
+
+        return (_apiKey, timestamp, signature);
     }
 
     /// <summary>

@@ -132,6 +132,8 @@ namespace QuantConnect.Brokerages.GDAX
 
             Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
 
+            WebSocket.Open += SubscribeOnWebSocketFeed;
+
             _job = job;
             _algorithm = algorithm;
             _aggregator = aggregator;
@@ -141,16 +143,11 @@ namespace QuantConnect.Brokerages.GDAX
 
             FillSplit = new ConcurrentDictionary<long, GDAXFill>();
 
-            var subscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager();
-
-            subscriptionManager.SubscribeImpl += (s, t) =>
+            SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()
             {
-                Subscribe(s);
-                return true;
+                SubscribeImpl = (symbols, _) => Subscribe(symbols),
+                UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
-            subscriptionManager.UnsubscribeImpl += (s, t) => Unsubscribe(s);
-
-            SubscriptionManager = subscriptionManager;
 
             // ValidateSubscription();
         }

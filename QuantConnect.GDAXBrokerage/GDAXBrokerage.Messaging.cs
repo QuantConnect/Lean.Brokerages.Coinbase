@@ -28,6 +28,9 @@ using QuantConnect.Orders.Fees;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using QuantConnect.CoinbaseBrokerage.Models;
+using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.CoinbaseBrokerage.Models.Constants;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -57,23 +60,28 @@ namespace QuantConnect.Brokerages.GDAX
 
         private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new();
 
-        /// <summary>
-        /// The list of WebSocket channels to subscribe
-        /// </summary>
-        private string[] ChannelNames { get; } = { "heartbeat", "level2", "matches" };
+        private void SubscribeOnWebSocketFeed(object _, EventArgs __)
+        {
+            Log.Debug($"{nameof(GDAXBrokerage)}:Open on Heartbeats channel");
+            SubscribeToChannel(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
+            Log.Debug($"{nameof(GDAXBrokerage)}:Connect: on User channel");
+            SubscribeToChannel(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+        }
 
         /// <summary>
         /// Wss message handler
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        protected override void OnMessage(object sender, WebSocketMessage webSocketMessage)
+        /// <param name="_"></param>
+        /// <param name="webSocketMessage"></param>
+        protected override void OnMessage(object _, WebSocketMessage webSocketMessage)
         {
-            var e = (WebSocketClientWrapper.TextMessage)webSocketMessage.Data;
+            var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
+
+            Log.Debug($"GDAXBrokerage.OnMessage: {data.Message}");
 
             try
             {
-                var raw = JsonConvert.DeserializeObject<Messages.BaseMessage>(e.Message, JsonSettings);
+                var raw = JsonConvert.DeserializeObject<Messages.BaseMessage>(data.Message, JsonSettings);
 
                 if (raw.Type == "heartbeat")
                 {
@@ -81,19 +89,19 @@ namespace QuantConnect.Brokerages.GDAX
                 }
                 else if (raw.Type == "snapshot")
                 {
-                    OnSnapshot(e.Message);
+                    OnSnapshot(data.Message);
                     return;
                 }
                 else if (raw.Type == "l2update")
                 {
-                    OnL2Update(e.Message);
+                    OnL2Update(data.Message);
                     return;
                 }
                 else if (raw.Type == "error")
                 {
-                    Log.Error($"GDAXBrokerage.OnMessage.error(): Data: {Environment.NewLine}{e.Message}");
+                    Log.Error($"GDAXBrokerage.OnMessage.error(): Data: {Environment.NewLine}{data.Message}");
 
-                    var error = JsonConvert.DeserializeObject<Messages.Error>(e.Message, JsonSettings);
+                    var error = JsonConvert.DeserializeObject<Messages.Error>(data.Message, JsonSettings);
                     var messageType = error.Message.Equals("Failed to subscribe", StringComparison.InvariantCultureIgnoreCase) ||
                                       error.Message.Equals("Authentication Failed", StringComparison.InvariantCultureIgnoreCase)
                         ? BrokerageMessageType.Error
@@ -104,7 +112,7 @@ namespace QuantConnect.Brokerages.GDAX
                 }
                 else if (raw.Type == "match")
                 {
-                    OnMatch(e.Message);
+                    OnMatch(data.Message);
                     return;
                 }
                 else if (raw.Type == "open" || raw.Type == "change" || raw.Type == "done" || raw.Type == "received" || raw.Type == "subscriptions" || raw.Type == "last_match")
@@ -113,11 +121,11 @@ namespace QuantConnect.Brokerages.GDAX
                     return;
                 }
 
-                Log.Trace($"GDAXWebsocketsBrokerage.OnMessage: Unexpected message format: {e.Message}");
+                Log.Trace($"GDAXWebsocketsBrokerage.OnMessage: Unexpected message format: {data.Message}");
             }
             catch (Exception exception)
             {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {e.Message} Exception: {exception}"));
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {data.Message} Exception: {exception}"));
                 throw;
             }
         }
@@ -241,7 +249,7 @@ namespace QuantConnect.Brokerages.GDAX
             // is this the total order at once? Is this the last split fill?
             var isFinalFill = Math.Abs(fill.Size) == Math.Abs(order.Quantity) || Math.Abs(split.OrderQuantity) == Math.Abs(split.TotalQuantity);
 
-            var status = isFinalFill ? OrderStatus.Filled : OrderStatus.PartiallyFilled;
+            var status = isFinalFill ? Orders.OrderStatus.Filled : Orders.OrderStatus.PartiallyFilled;
 
             var direction = fill.Side == "sell" ? OrderDirection.Sell : OrderDirection.Buy;
 
@@ -269,7 +277,7 @@ namespace QuantConnect.Brokerages.GDAX
             );
 
             // when the order is completely filled, we no longer need it in the active order list
-            if (orderEvent.Status == OrderStatus.Filled)
+            if (orderEvent.Status == Orders.OrderStatus.Filled)
             {
                 Order outOrder;
                 CachedOrderIDs.TryRemove(order.Id, out outOrder);
@@ -322,7 +330,7 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         /// <summary>
-        /// Creates websocket message subscriptions for the supplied symbols
+        /// Creates WebSocket message subscriptions for the supplied symbols
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
         {
@@ -346,39 +354,18 @@ namespace QuantConnect.Brokerages.GDAX
                 }
             }
 
-            var products = pendingSymbols
-                .Select(s => _symbolMapper.GetBrokerageSymbol(s))
-                .ToArray();
+            var products = pendingSymbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
 
-            var payload = new
-            {
-                type = "subscribe",
-                product_ids = products,
-                channels = ChannelNames
-            };
-
-            if (payload.product_ids.Length == 0)
+            if (products.Count == 0)
             {
                 return true;
             }
 
-            var token = GetAuthenticationToken(string.Empty, "GET", "/users/self/verify");
-
-            var json = JsonConvert.SerializeObject(new
+            foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
             {
-                type = payload.type,
-                channels = payload.channels,
-                product_ids = payload.product_ids,
-                timestamp = token.Timestamp,
-                key = ApiKey,
-                signature = token.Signature,
-            });
+                SubscribeToChannel(WebSocketSubscriptionType.Subscribe, channel, products);
+            }
 
-            _webSocketRateLimit.WaitToProceed();
-
-            WebSocket.Send(json);
-
-            Log.Trace("GDAXBrokerage.Subscribe: Sent subscribe.");
             return true;
         }
 
@@ -448,7 +435,7 @@ namespace QuantConnect.Brokerages.GDAX
                 var payload = new
                 {
                     type = "unsubscribe",
-                    channels = ChannelNames,
+                    //channels = ChannelNames,
                     product_ids = products
                 };
 
@@ -457,6 +444,30 @@ namespace QuantConnect.Brokerages.GDAX
                 WebSocket.Send(JsonConvert.SerializeObject(payload));
             }
             return true;
+        }
+
+        private void SubscribeToChannel(WebSocketSubscriptionType subscriptionType, string channel, List<string> productIds = null)
+        {
+            if (string.IsNullOrWhiteSpace(channel))
+            {
+                throw new ArgumentException($"{nameof(GDAXBrokerage)}:SubscribeToChannel: ChannelRequired:", nameof(channel));
+            }
+
+            if (!IsConnected)
+            {
+                throw new InvalidOperationException($"{nameof(GDAXBrokerage)}:SubscribeToChannel: WebSocketMustBeConnected");
+            }
+
+            productIds ??= new List<string> { "" };
+
+            var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
+
+            var json = JsonConvert.SerializeObject(
+                new CoinbaseSubscriptionMessage(apiKey, channel, productIds, signature, timestamp, subscriptionType));
+
+            Log.Debug("SubscribeToChannel:json: " + json);
+
+            WebSocket.Send(json);
         }
 
         private class PendingOrder

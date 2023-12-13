@@ -69,6 +69,11 @@ public class CoinbaseApi : IDisposable
         _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
     }
 
+    public (string apiKey, string timestamp, string signature) GetWebSocketSignatures(string channel, ICollection<string> productIds)
+    {
+        return _apiClient.GenerateWebSocketSignature(channel, productIds);
+    }
+
     /// <summary>
     /// Retrieves a list of Coinbase accounts associated with the authenticated user's brokerage.
     /// </summary>

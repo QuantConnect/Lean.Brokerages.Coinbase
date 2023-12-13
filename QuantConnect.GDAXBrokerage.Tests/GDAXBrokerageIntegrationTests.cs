@@ -14,7 +14,6 @@
 */
 
 using System;
-using QuantConnect.Brokerages.GDAX;
 using NUnit.Framework;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
@@ -23,14 +22,14 @@ using QuantConnect.Orders;
 using Moq;
 using QuantConnect.Brokerages;
 using QuantConnect.Tests.Common.Securities;
-using RestSharp;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.CoinbaseBrokerage.Api;
+using QuantConnect.Brokerages.GDAX;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
     [TestFixture]
-    public class GDAXBrokerageIntegrationTests : BrokerageTests
+    public partial class GDAXBrokerageIntegrationTests : BrokerageTests
     {
         #region Properties
         protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX);
