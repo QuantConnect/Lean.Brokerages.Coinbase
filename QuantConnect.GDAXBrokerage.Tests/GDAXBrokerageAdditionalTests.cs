@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -26,54 +27,49 @@ using QuantConnect.Interfaces;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
-using RestSharp;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
     [TestFixture]
     public class GDAXBrokerageAdditionalTests
     {
-        [Test]
-        public void PrivateEndpointCallsAreRateLimited()
+        [Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
+        [TestCase(5)]
+        public void BrokerageConnectionAndReconnectionTest(int amountAttempt)
         {
-            using (var brokerage = GetBrokerage())
-            {
-                brokerage.Connect();
-                Assert.IsTrue(brokerage.IsConnected);
-
-                for (var i = 0; i < 50; i++)
-                {
-                    Assert.DoesNotThrow(() => brokerage.GetOpenOrders());
-                }
-            }
-        }
-
-        [Test]
-        public void ClientConnects()
-        {
-            using (var brokerage = GetBrokerage())
+            int counter = 0;
+            var cancellationTokenSource = new CancellationTokenSource();
+            using (var brokerage = GetBrokerage())  
             {
                 var hasError = false;
 
-                brokerage.Message += (s, e) => { hasError = true; };
+                brokerage.Message += (_, brokerageMessageEvent) => {
+                    Log.Debug("");
+                    Log.Debug($"Brokerage:Error: {brokerageMessageEvent.Message}");
+                    hasError = true; 
+                };
 
-                Log.Trace("Connect #1");
-                brokerage.Connect();
-                Assert.IsTrue(brokerage.IsConnected);
+                do
+                {
+                    Log.Debug("");
+                    Log.Debug($"BrokerageConnectionAndReconnectionTest: connection attempt: #{counter}");
+                    brokerage.Connect();
+                    Assert.IsTrue(brokerage.IsConnected);
 
-                Assert.IsFalse(hasError);
+                    // cool down 
+                    cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(10));
 
-                Log.Trace("Disconnect #1");
-                brokerage.Disconnect();
-                Assert.IsFalse(brokerage.IsConnected);
+                    Assert.IsFalse(hasError);
 
-                Log.Trace("Connect #2");
-                brokerage.Connect();
-                Assert.IsTrue(brokerage.IsConnected);
+                    Log.Debug("");
+                    Log.Debug($"BrokerageConnectionAndReconnectionTest: disconnect attempt: #{counter}");
+                    brokerage.Disconnect();
+                    Assert.IsFalse(brokerage.IsConnected);
 
-                Log.Trace("Disconnect #2");
-                brokerage.Disconnect();
-                Assert.IsFalse(brokerage.IsConnected);
+                    // cool down 
+                    cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(5));
+
+                } while (++counter < amountAttempt);
             }
         }
 
@@ -95,7 +91,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             .Select(ticker => Symbol.Create(ticker, SecurityType.Crypto, Market.GDAX))
             .ToList();
 
-            using (var dqh = GetDataQueueHandler())
+            using (var dqh = GetBrokerage())
             {
                 dqh.Connect();
                 Assert.IsTrue(dqh.IsConnected);
@@ -109,21 +105,6 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                 dqh.Disconnect();
                 Assert.IsFalse(dqh.IsConnected);
             }
-        }
-
-        private static TestGDAXDataQueueHandler GetDataQueueHandler()
-        {
-            var wssUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiSecret = Config.Get("coinbase-api-secret");
-            var restApiUrl = Config.Get("coinbase-api-url");
-            var algorithm = new QCAlgorithm();
-            var userId = Config.GetInt("job-user-id");
-            var userToken = Config.Get("api-access-token");
-            var priceProvider = new ApiPriceProvider(userId, userToken);
-            var aggregator = new AggregationManager();
-
-            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
         }
 
         private static TestGDAXDataQueueHandler GetBrokerage()

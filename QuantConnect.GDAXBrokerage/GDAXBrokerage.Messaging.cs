@@ -86,6 +86,12 @@ namespace QuantConnect.Brokerages.GDAX
 
                 var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
 
+                if( channel == null ) 
+                {
+                    // We got this error from `user` channel
+                    // obj["message"] {failure to subscribe}
+                }
+
                 switch (channel)
                 {
                     case CoinbaseWebSocketChannels.MarketTrades:
@@ -428,7 +434,7 @@ namespace QuantConnect.Brokerages.GDAX
             var json = JsonConvert.SerializeObject(
                 new CoinbaseSubscriptionMessage(apiKey, channel, productIds, signature, timestamp, subscriptionType));
 
-            Log.Debug("SubscribeToChannel:json: " + json);
+            Log.Debug("SubscribeToChannel:send json message: " + json);
 
             WebSocket.Send(json);
         }
