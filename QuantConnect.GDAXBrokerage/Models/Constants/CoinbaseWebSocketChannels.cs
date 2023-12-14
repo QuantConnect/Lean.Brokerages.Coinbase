@@ -42,11 +42,21 @@ public sealed class CoinbaseWebSocketChannels
 
     /// <summary>
     /// All updates and easiest way to keep order book snapshot
+    /// Use: when subscribe on channel update
     /// </summary>
     /// <remarks>
     /// The level2 channel guarantees delivery of all updates and is the easiest way to keep a snapshot of the order book.
     /// </remarks>
-    public const string Level2 = "level2";
+    public const string Level2Request = "level2";
+
+    /// <summary>
+    /// All updates and easiest way to keep order book snapshot
+    /// Use: when parse response 
+    /// </summary>
+    /// <remarks>
+    /// The level2 channel guarantees delivery of all updates and is the easiest way to keep a snapshot of the order book.
+    /// </remarks>
+    public const string Level2Response = "l2_data";
 
     /// <summary>
     /// Real-time updates every time a market trade happens
@@ -56,9 +66,21 @@ public sealed class CoinbaseWebSocketChannels
     /// </remarks>
     public const string MarketTrades = "market_trades";
 
-    public readonly static ICollection<string> WebSocketChannelList = new List<string>
-    {
-        Level2,
-        MarketTrades,
-    };
+    /// <summary>
+    /// Represents a notification about various subscription events in the system.
+    /// </summary>
+    /// <example>
+    /// { ... "events":[{"subscriptions":{"heartbeats":["heartbeats"],"level2":["BTC-USD"],"market_trades":["BTC-USD"]}}]}
+    /// </example>
+    public const string Subscriptions = "subscriptions";
+
+    /// <summary>
+    /// Represents the channel information in a subscription event.
+    /// </summary>
+    public const string Channel = "channel";
+
+    /// <summary>
+    /// Represents a collection of WebSocket channels used for subscribing to real-time data for specific symbols.
+    /// </summary>
+    public readonly static ICollection<string> WebSocketChannelList = new string[] { Level2Request, MarketTrades };
 }

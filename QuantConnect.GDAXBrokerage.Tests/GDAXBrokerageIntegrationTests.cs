@@ -71,7 +71,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
             var apiKey = Config.Get("coinbase-api-key");
             var apiSecret = Config.Get("coinbase-api-secret");
-            var restApiUrl = Config.Get("coinbase-api-url");
+            var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
             var webSocketUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
 
             _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);

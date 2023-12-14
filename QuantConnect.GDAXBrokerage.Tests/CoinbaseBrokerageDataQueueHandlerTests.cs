@@ -15,15 +15,12 @@
 
 using System;
 using NUnit.Framework;
+using System.Threading;
+using QuantConnect.Data;
+using QuantConnect.Logging;
+using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.Brokerages.GDAX;
-using QuantConnect.Configuration;
-using QuantConnect.Lean.Engine.DataFeeds;
-using QuantConnect.Data.Market;
-using QuantConnect.Data;
-using QuantConnect.Interfaces;
-using System.Threading;
-using QuantConnect.Logging;
 
 namespace QuantConnect.Tests.Brokerages.GDAX
 {
@@ -35,20 +32,22 @@ namespace QuantConnect.Tests.Brokerages.GDAX
     {
         private GDAXBrokerage _brokerage { get => (GDAXBrokerage)Brokerage; }
 
-        private static readonly Symbol BTCUSDC = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX);
+        private static readonly Symbol BTCUSDC = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX);
 
         private static IEnumerable<TestCaseData> TestParameters
         {
             get
             {
-                yield return new TestCaseData(BTCUSDC, Resolution.Tick, false);
-                yield return new TestCaseData(BTCUSDC, Resolution.Second, false);
-                yield return new TestCaseData(BTCUSDC, Resolution.Minute, false);
+                yield return new TestCaseData(BTCUSDC, Resolution.Tick);
+                yield return new TestCaseData(BTCUSDC, Resolution.Second);
+                yield return new TestCaseData(BTCUSDC, Resolution.Minute);
+                yield return new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.GDAX), Resolution.Minute);
+                yield return new TestCaseData(Symbol.Create("GRTUSD", SecurityType.Crypto, Market.GDAX), Resolution.Second);
             }
         }
 
         [Test, TestCaseSource(nameof(TestParameters))]
-        public void StreamsData(Symbol symbol, Resolution resolution, bool throwsException)
+        public void StreamsData(Symbol symbol, Resolution resolution)
         {
             var startTime = DateTime.UtcNow;
             var cancelationToken = new CancellationTokenSource();
@@ -77,22 +76,46 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             {
                 ProcessFeed(_brokerage.Subscribe(config, (s, e) => { }),
                     cancelationToken,
-                    (baseData) =>
+                    (tick) =>
                     {
-                        if (baseData != null)
+                        if (tick != null)
                         {
-                            Assert.GreaterOrEqual(baseData.EndTime.Ticks, startTime.Ticks);
+                            Assert.GreaterOrEqual(tick.EndTime.Ticks, startTime.Ticks);
 
-                            if ((baseData as Tick)?.TickType == TickType.Quote || baseData is QuoteBar)
+                            Log.Debug("");
+
+                            Assert.That(tick.Symbol, Is.EqualTo(config.Symbol));
+                            Assert.NotZero(tick.Price);
+                            Assert.IsTrue(tick.Price > 0, "Price was not greater then zero");
+                            Assert.IsTrue(tick.Value > 0, "Value was not greater then zero");
+
+                            if (tick is Tick)
                             {
-                                quote.Set();
+                                Log.Debug($"Tick: {tick}");
+
                             }
-                            else if ((baseData as Tick)?.TickType == TickType.Trade || baseData is TradeBar)
+
+                            if ((tick as Tick)?.TickType == TickType.Trade || tick is TradeBar)
                             {
+                                Log.Debug($"TradeBar: {tick}");
+
+                                if (resolution != Resolution.Tick)
+                                {
+                                    Assert.IsTrue(tick.DataType == MarketDataType.TradeBar);
+                                }
+
                                 trade.Set();
                             }
-                            Log.Debug("");
-                            Log.Trace($"Data received: {baseData}");
+
+                            if ((tick as Tick)?.TickType == TickType.Quote || tick is QuoteBar)
+                            {
+                                Log.Debug($"QuoteBar: {tick}");
+                                if (resolution != Resolution.Tick)
+                                {
+                                    Assert.IsTrue(tick.DataType == MarketDataType.QuoteBar);
+                                }
+                                quote.Set();
+                            }
                         }
                     });
             }

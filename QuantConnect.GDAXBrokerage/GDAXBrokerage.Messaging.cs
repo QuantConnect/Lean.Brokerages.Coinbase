@@ -20,7 +20,7 @@ using System.Threading;
 using QuantConnect.Util;
 using QuantConnect.Orders;
 using QuantConnect.Logging;
-using System.Globalization;
+using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
@@ -31,6 +31,7 @@ using System.Collections.Concurrent;
 using QuantConnect.CoinbaseBrokerage.Models;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 using QuantConnect.CoinbaseBrokerage.Models.Constants;
+using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
 
 namespace QuantConnect.Brokerages.GDAX
 {
@@ -63,9 +64,9 @@ namespace QuantConnect.Brokerages.GDAX
         private void SubscribeOnWebSocketFeed(object _, EventArgs __)
         {
             Log.Debug($"{nameof(GDAXBrokerage)}:Open on Heartbeats channel");
-            SubscribeToChannel(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
+            ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
             Log.Debug($"{nameof(GDAXBrokerage)}:Connect: on User channel");
-            SubscribeToChannel(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+            ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
         }
 
         /// <summary>
@@ -81,97 +82,77 @@ namespace QuantConnect.Brokerages.GDAX
 
             try
             {
-                var raw = JsonConvert.DeserializeObject<Messages.BaseMessage>(data.Message, JsonSettings);
+                var obj = JObject.Parse(data.Message);
 
-                if (raw.Type == "heartbeat")
-                {
-                    return;
-                }
-                else if (raw.Type == "snapshot")
-                {
-                    OnSnapshot(data.Message);
-                    return;
-                }
-                else if (raw.Type == "l2update")
-                {
-                    OnL2Update(data.Message);
-                    return;
-                }
-                else if (raw.Type == "error")
-                {
-                    Log.Error($"GDAXBrokerage.OnMessage.error(): Data: {Environment.NewLine}{data.Message}");
+                var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
 
-                    var error = JsonConvert.DeserializeObject<Messages.Error>(data.Message, JsonSettings);
-                    var messageType = error.Message.Equals("Failed to subscribe", StringComparison.InvariantCultureIgnoreCase) ||
-                                      error.Message.Equals("Authentication Failed", StringComparison.InvariantCultureIgnoreCase)
-                        ? BrokerageMessageType.Error
-                        : BrokerageMessageType.Warning;
-                    var message = $"Message:{error.Message} - Reason:{error.Reason}";
-
-                    OnMessage(new BrokerageMessageEvent(messageType, -1, $"GDAXBrokerage.OnMessage: {message}"));
-                }
-                else if (raw.Type == "match")
+                switch (channel)
                 {
-                    OnMatch(data.Message);
-                    return;
+                    case CoinbaseWebSocketChannels.MarketTrades:
+                        var message = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseMarketTradesEvent>>();
+                        if (message.Events[0].Type == WebSocketEventType.update)
+                        {
+                            EmitTradeTick(message.Events[0]);
+                        }
+                        break;
+                    case CoinbaseWebSocketChannels.User:
+                        var message2 = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
+                        break;
+                    case CoinbaseWebSocketChannels.Level2Response:
+                        var level2Data = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseLevel2Event>>();
+                        switch (level2Data.Events[0].Type)
+                        {
+                            case WebSocketEventType.snapshot:
+                                Level2Snapshot(level2Data.Events[0]);
+                                break;
+                            case WebSocketEventType.update:
+                                Level2Update(level2Data.Events[0]);
+                                break;
+                            default:
+                                throw new ArgumentException();
+                        };
+                        break;
                 }
-                else if (raw.Type == "open" || raw.Type == "change" || raw.Type == "done" || raw.Type == "received" || raw.Type == "subscriptions" || raw.Type == "last_match")
-                {
-                    //known messages we don't need to handle or log
-                    return;
-                }
-
-                Log.Trace($"GDAXWebsocketsBrokerage.OnMessage: Unexpected message format: {data.Message}");
             }
-            catch (Exception exception)
+            catch (Exception ex)
             {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {data.Message} Exception: {exception}"));
-                throw;
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {ex.Message} Exception: {ex}"));
             }
         }
 
-        private void OnSnapshot(string data)
+        private void Level2Snapshot(CoinbaseLevel2Event snapshotData)
         {
-            try
+            var symbol = _symbolMapper.GetLeanSymbol(snapshotData.ProductId, SecurityType.Crypto, Market.GDAX);
+
+            DefaultOrderBook orderBook;
+            if (!_orderBooks.TryGetValue(symbol, out orderBook))
             {
-                var message = JsonConvert.DeserializeObject<Messages.Snapshot>(data);
-
-                var symbol = _symbolMapper.GetLeanSymbol(message.ProductId, SecurityType.Crypto, Market.GDAX);
-
-                DefaultOrderBook orderBook;
-                if (!_orderBooks.TryGetValue(symbol, out orderBook))
-                {
-                    orderBook = new DefaultOrderBook(symbol);
-                    _orderBooks[symbol] = orderBook;
-                }
-                else
-                {
-                    orderBook.BestBidAskUpdated -= OnBestBidAskUpdated;
-                    orderBook.Clear();
-                }
-
-                foreach (var row in message.Bids)
-                {
-                    var price = decimal.Parse(row[0], NumberStyles.Float, CultureInfo.InvariantCulture);
-                    var size = decimal.Parse(row[1], NumberStyles.Float, CultureInfo.InvariantCulture);
-                    orderBook.UpdateBidRow(price, size);
-                }
-                foreach (var row in message.Asks)
-                {
-                    var price = decimal.Parse(row[0], NumberStyles.Float, CultureInfo.InvariantCulture);
-                    var size = decimal.Parse(row[1], NumberStyles.Float, CultureInfo.InvariantCulture);
-                    orderBook.UpdateAskRow(price, size);
-                }
-
-                orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
-
-                EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
+                orderBook = new DefaultOrderBook(symbol);
+                _orderBooks[symbol] = orderBook;
             }
-            catch (Exception e)
+            else
             {
-                Log.Error(e);
-                throw;
+                orderBook.BestBidAskUpdated -= OnBestBidAskUpdated;
+                orderBook.Clear();
             }
+
+            foreach (var update in snapshotData.Updates)
+            {
+                if (update.Side == CoinbaseLevel2UpdateSide.bid)
+                {
+                    orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                    continue;
+                }
+
+                if (update.Side == CoinbaseLevel2UpdateSide.offer)
+                {
+                    orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                }
+            }
+
+            orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
+
+            EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
         }
 
         private void OnBestBidAskUpdated(object sender, BestBidAskUpdatedEventArgs e)
@@ -179,59 +160,60 @@ namespace QuantConnect.Brokerages.GDAX
             EmitQuoteTick(e.Symbol, e.BestBidPrice, e.BestBidSize, e.BestAskPrice, e.BestAskSize);
         }
 
-        private void OnL2Update(string data)
+        private void Level2Update(CoinbaseLevel2Event updateData)
         {
-            try
+            var leanSymbol = _symbolMapper.GetLeanSymbol(updateData.ProductId, SecurityType.Crypto, Market.GDAX);
+
+            if (!_orderBooks.TryGetValue(leanSymbol, out var orderBook))
             {
-                var message = JsonConvert.DeserializeObject<Messages.L2Update>(data);
-
-                var symbol = _symbolMapper.GetLeanSymbol(message.ProductId, SecurityType.Crypto, Market.GDAX);
-
-                var orderBook = _orderBooks[symbol];
-
-                foreach (var row in message.Changes)
-                {
-                    var side = row[0];
-                    var price = Convert.ToDecimal(row[1], CultureInfo.InvariantCulture);
-                    var size = decimal.Parse(row[2], NumberStyles.Float, CultureInfo.InvariantCulture);
-                    if (side == "buy")
-                    {
-                        if (size == 0)
-                        {
-                            orderBook.RemoveBidRow(price);
-                        }
-                        else
-                        {
-                            orderBook.UpdateBidRow(price, size);
-                        }
-                    }
-                    else if (side == "sell")
-                    {
-                        if (size == 0)
-                        {
-                            orderBook.RemoveAskRow(price);
-                        }
-                        else
-                        {
-                            orderBook.UpdateAskRow(price, size);
-                        }
-                    }
-                }
+                Log.Error($"Attempting to update a non existent order book for {leanSymbol}");
+                return;
             }
-            catch (Exception e)
+
+            foreach (var update in updateData.Updates)
             {
-                Log.Error(e, "Data: " + data);
-                throw;
+                switch (update.Side)
+                {
+                    case CoinbaseLevel2UpdateSide.bid:
+                        if (update.NewQuantity.Value == 0)
+                        {
+                            orderBook.RemoveBidRow(update.PriceLevel.Value);
+                        }
+                        else
+                        {
+                            orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                        }
+                        continue;
+                    case CoinbaseLevel2UpdateSide.offer:
+                        if (update.NewQuantity.Value == 0)
+                        {
+                            orderBook.RemoveAskRow(update.PriceLevel.Value);
+                        }
+                        else
+                        {
+                            orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                        }
+                        continue;
+                }
             }
         }
 
-        private void OnMatch(string data)
+        private void EmitTradeTick(CoinbaseMarketTradesEvent tradeUpdates)
         {
-            // deserialize the current match (trade) message
-            var message = JsonConvert.DeserializeObject<Messages.Matched>(data, JsonSettings);
+            foreach (var trade in tradeUpdates.Trades)
+            {
+                var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, Market.GDAX);
 
-            // message received from the "matches" channel
-            EmitTradeTick(message);
+                _aggregator.Update(new Tick
+                {
+                    Value = trade.Price.Value,
+                    Time = trade.Time.UtcDateTime,
+                    Symbol = symbol,
+                    TickType = TickType.Trade,
+                    Quantity = trade.Size.Value,
+                    Exchange = MarketName
+                });
+            }
         }
 
         private void EmitFillOrderEvent(Messages.Fill fill, Order order)
@@ -313,23 +295,6 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         /// <summary>
-        /// Emits a new trade tick from a match message
-        /// </summary>
-        private void EmitTradeTick(Messages.Matched message)
-        {
-            var symbol = _symbolMapper.GetLeanSymbol(message.ProductId, SecurityType.Crypto, Market.GDAX);
-
-            _aggregator.Update(new Tick
-            {
-                Value = message.Price,
-                Time = DateTime.UtcNow,
-                Symbol = symbol,
-                TickType = TickType.Trade,
-                Quantity = message.Size
-            });
-        }
-
-        /// <summary>
         /// Creates WebSocket message subscriptions for the supplied symbols
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
@@ -363,7 +328,7 @@ namespace QuantConnect.Brokerages.GDAX
 
             foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
             {
-                SubscribeToChannel(WebSocketSubscriptionType.Subscribe, channel, products);
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, channel, products);
             }
 
             return true;
@@ -424,29 +389,27 @@ namespace QuantConnect.Brokerages.GDAX
         /// <summary>
         /// Ends current subscriptions
         /// </summary>
-        public bool Unsubscribe(IEnumerable<Symbol> symbols)
+        public bool Unsubscribe(IEnumerable<Symbol> leanSymbols)
         {
-            if (WebSocket.IsOpen)
+            var brokerageSymbols = leanSymbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
+
+            foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
             {
-                var products = symbols
-                    .Select(s => _symbolMapper.GetBrokerageSymbol(s))
-                    .ToArray();
-
-                var payload = new
-                {
-                    type = "unsubscribe",
-                    //channels = ChannelNames,
-                    product_ids = products
-                };
-
-                _webSocketRateLimit.WaitToProceed();
-
-                WebSocket.Send(JsonConvert.SerializeObject(payload));
+                ManageChannelSubscription(WebSocketSubscriptionType.Unsubscribe, channel, brokerageSymbols);
             }
+
             return true;
         }
 
-        private void SubscribeToChannel(WebSocketSubscriptionType subscriptionType, string channel, List<string> productIds = null)
+        /// <summary>
+        /// Manages WebSocket subscriptions by subscribing or unsubscribing to a specified channel.
+        /// </summary>
+        /// <param name="subscriptionType">The type of WebSocket subscription (subscribe or unsubscribe).</param>
+        /// <param name="channel">The channel to subscribe or unsubscribe from. <see cref="CoinbaseWebSocketChannels"/></param>
+        /// <param name="productIds">Optional list of product IDs associated with the subscription.</param>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="InvalidOperationException"></exception>
+        private void ManageChannelSubscription(WebSocketSubscriptionType subscriptionType, string channel, List<string> productIds = null)
         {
             if (string.IsNullOrWhiteSpace(channel))
             {
