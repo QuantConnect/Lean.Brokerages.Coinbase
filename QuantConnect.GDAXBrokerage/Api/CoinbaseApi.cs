@@ -52,6 +52,12 @@ public class CoinbaseApi : IDisposable
     /// </summary>
     private readonly string _apiPrefix = "/api/v3";
 
+    private JsonSerializerSettings _jsonSerializerSettings = new()
+    {
+        Converters = new List<JsonConverter>() { new CoinbaseDecimalStringConverter() },
+        NullValueHandling = NullValueHandling.Ignore
+    };
+
     /// <summary>
     /// Symbol mapper
     /// </summary>
@@ -169,12 +175,7 @@ public class CoinbaseApi : IDisposable
 
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders", Method.POST);
 
-        request.AddJsonBody(JsonConvert.SerializeObject(placeOrderRequest,
-            new JsonSerializerSettings 
-            {
-                Converters = new List<JsonConverter>() { new CoinbaseDecimalStringConverter() },
-                NullValueHandling = NullValueHandling.Ignore 
-            }));
+        request.AddJsonBody(JsonConvert.SerializeObject(placeOrderRequest, _jsonSerializerSettings));
 
         var response = _apiClient.ExecuteRequest(request);
 
