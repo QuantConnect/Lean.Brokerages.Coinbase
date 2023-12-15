@@ -19,6 +19,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using QuantConnect.Util;
 using QuantConnect.Orders;
+using System.Globalization;
 using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using System.Collections.Generic;
@@ -138,6 +139,28 @@ public class CoinbaseApi : IDisposable
         var response = _apiClient.ExecuteRequest(request);
 
         return JsonConvert.DeserializeObject<CoinbaseMarketTrades>(response.Content);
+    }
+
+    /// <summary>
+    /// Get rates for a single product by product ID, grouped in buckets.
+    /// </summary>
+    /// <param name="productId">The trading pair, i.e., 'BTC-USD'.</param>
+    /// <param name="start">Timestamp for starting range of aggregations, in UNIX time.</param>
+    /// <param name="end">Timestamp for ending range of aggregations, in UNIX time.</param>
+    /// <param name="granularity">The time slice value for each candle. <see cref="CandleGranularity"/></param>
+    /// <returns>An enumerable <see cref="Candle"/> collection.</returns>
+    public IEnumerable<Candle> GetProductCandles(string productId, DateTime start, DateTime end, CandleGranularity granularity)
+    {
+        var request = new RestRequest($"{_apiPrefix}/brokerage/products/{productId}/candles", Method.GET);
+
+        request.AddQueryParameter("start", Time.DateTimeToUnixTimeStamp(start).ToString("F0", CultureInfo.InvariantCulture));
+        request.AddQueryParameter("end", Time.DateTimeToUnixTimeStamp(end).ToString("F0", CultureInfo.InvariantCulture));
+        request.AddQueryParameter("granularity", granularity.ToStringInvariant());
+
+        var response = _apiClient.ExecuteRequest(request);
+
+        // returns data backwards should use Reverse
+        return JsonConvert.DeserializeObject<CoinbaseProductCandles>(response.Content).Candles.Reverse();
     }
 
     public CoinbaseCreateOrderResponse CreateOrder(Order leanOrder)

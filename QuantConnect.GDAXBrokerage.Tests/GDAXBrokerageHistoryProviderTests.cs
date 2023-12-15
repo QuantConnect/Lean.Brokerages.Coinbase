@@ -91,6 +91,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             return new[]
             {
                 // valid parameters
+                new TestCaseData(btcusd, Resolution.Minute, TickType.Trade, TimeSpan.FromDays(5), false),
                 new TestCaseData(btcusd, Resolution.Minute, TickType.Trade, Time.OneHour, false),
                 new TestCaseData(btcusd, Resolution.Hour, TickType.Trade, Time.OneDay, false),
                 new TestCaseData(btcusd, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false),
