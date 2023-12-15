@@ -167,7 +167,7 @@ public class CoinbaseApi : IDisposable
     {
         var placeOrderRequest = CreateRequest(leanOrder);
 
-        var request = new RestRequest("/api/v3/brokerage/orders", Method.POST);
+        var request = new RestRequest($"{_apiPrefix}/brokerage/orders", Method.POST);
 
         request.AddJsonBody(JsonConvert.SerializeObject(placeOrderRequest,
             new JsonSerializerSettings 

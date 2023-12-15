@@ -25,13 +25,18 @@ namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 public enum OrderSide
 {
     /// <summary>
+    /// Indicates a unknown order siede.
+    /// </summary>
+    UNKNOWN_ORDER_SIDE = 0,
+
+    /// <summary>
     /// Indicates a buy order.
     /// </summary>
-    BUY = 0,
+    BUY = 1,
 
     /// <summary>
     /// Indicates a sell order.
     /// </summary>
-    SELL = 1,
+    SELL = 2,
 }
 
