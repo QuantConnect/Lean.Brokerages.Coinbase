@@ -116,7 +116,7 @@ public class CoinbaseApi : IDisposable
     /// Get snapshot information, by product ID, about the last trades (ticks), best bid/ask, and 24h volume.
     /// </summary>
     /// <param name="productId">The trading pair, i.e., 'BTC-USD'.</param>
-    /// <param name="limit">Number of trades to return.</param>
+    /// <param name="limit">Number of trades to return. Correct Range between [1:1000] </param>
     /// <returns>An instance of the <see cref="CoinbaseMarketTrades"/> struct.</returns>
     /// <exception cref="ArgumentException">Thrown when the provided productId is null or empty.</exception>
     public CoinbaseMarketTrades GetMarketTrades(string productId, int limit = 1)
@@ -124,6 +124,11 @@ public class CoinbaseApi : IDisposable
         if (string.IsNullOrEmpty(productId))
         {
             throw new ArgumentException("CoinbaseApi:GetMarketTrades(): productId is null or empty");
+        }
+
+        if (limit > 1000)
+        {
+            throw new ArgumentException("CoinbaseApi:GetMarketTrades(): Please provide a limit equal to or below 1000.");
         }
 
         var request = new RestRequest($"{_apiPrefix}/brokerage/products/{productId}/ticker", Method.GET);
