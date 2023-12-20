@@ -53,12 +53,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// </summary>
         public ConcurrentDictionary<long, GDAXFill> FillSplit { get; set; }
 
-        private readonly CancellationTokenSource _canceller = new CancellationTokenSource();
-
-        private IPriceProvider _priceProvider;
-
-        private readonly CancellationTokenSource _ctsFillMonitor = new CancellationTokenSource();
-
         private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new();
 
         private void SubscribeOnWebSocketFeed(object _, EventArgs __)
@@ -317,12 +311,6 @@ namespace QuantConnect.Brokerages.GDAX
                 {
                     Log.Error($"Unknown GDAX symbol: {item.Value}");
                 }
-                else
-                {
-                    //todo: refactor this outside brokerage
-                    //alternative service: http://openexchangerates.org/latest.json
-                    PollTick(item);
-                }
             }
 
             var products = pendingSymbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
@@ -338,58 +326,6 @@ namespace QuantConnect.Brokerages.GDAX
             }
 
             return true;
-        }
-
-        /// <summary>
-        /// Poll for new tick to refresh conversion rate of non-USD denomination
-        /// </summary>
-        /// <param name="symbol"></param>
-        public void PollTick(Symbol symbol)
-        {
-            int delay = 36000;
-            var token = _canceller.Token;
-            var listener = Task.Factory.StartNew(() =>
-            {
-                Log.Trace($"GDAXBrokerage.PollLatestTick: started polling for ticks: {symbol.Value}");
-
-                while (true)
-                {
-                    var rate = GetConversionRate(symbol);
-
-                    var latest = new Tick
-                    {
-                        Value = rate,
-                        Time = DateTime.UtcNow,
-                        Symbol = symbol,
-                        TickType = TickType.Quote
-                    };
-                    _aggregator.Update(latest);
-
-                    int count = 0;
-                    while (++count < delay)
-                    {
-                        if (token.IsCancellationRequested) break;
-                        Thread.Sleep(1000);
-                    }
-
-                    if (token.IsCancellationRequested) break;
-                }
-
-                Log.Trace($"PollLatestTick: stopped polling for ticks: {symbol.Value}");
-            }, token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-        }
-
-        private decimal GetConversionRate(Symbol symbol)
-        {
-            try
-            {
-                return _priceProvider.GetLastPrice(symbol);
-            }
-            catch (Exception e)
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, 0, $"GetConversionRate: {e.Message}"));
-                return 0;
-            }
         }
 
         /// <summary>

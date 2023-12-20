@@ -114,12 +114,9 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var apiSecret = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-api-url");
             var algorithm = new QCAlgorithm();
-            var userId = Config.GetInt("job-user-id");
-            var userToken = Config.Get("api-access-token");
-            var priceProvider = new ApiPriceProvider(userId, userToken);
             var aggregator = new AggregationManager();
 
-            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null);
+            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
         }
 
         private class TestGDAXDataQueueHandler : GDAXBrokerage
@@ -128,11 +125,10 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                 string apiSecret,
                 string restApiUrl,
                 IAlgorithm algorithm,
-                IPriceProvider priceProvider,
                 IDataAggregator aggregator,
                 LiveNodePacket job
                 )
-                : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, job)
+                : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, job)
             {
             }
 

@@ -66,9 +66,6 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             algorithm.Setup(a => a.Portfolio).Returns(new SecurityPortfolioManager(securities, transactions, algorithmSettings));
             algorithm.Setup(a => a.Securities).Returns(securities);
 
-            var priceProvider = new Mock<IPriceProvider>();
-            priceProvider.Setup(a => a.GetLastPrice(It.IsAny<Symbol>())).Returns(1.234m);
-
             var apiKey = Config.Get("coinbase-api-key");
             var apiSecret = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
@@ -76,8 +73,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
             _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
 
-            return new GDAXBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, 
-                priceProvider.Object, new AggregationManager(), null);
+            return new GDAXBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, new AggregationManager(), null);
         }
 
         /// <summary>

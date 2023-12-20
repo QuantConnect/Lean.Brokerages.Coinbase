@@ -89,7 +89,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
             var apiKey = Config.Get("coinbase-api-key", "");
             var apiSecret = Config.Get("coinbase-api-secret", "");
             var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
-            return new GDAXBrokerage(string.Empty, apiKey, apiSecret, restApiUrl, null, null, null, null);
+            return new GDAXBrokerage(string.Empty, apiKey, apiSecret, restApiUrl, null, null, null);
         }
     }
 }

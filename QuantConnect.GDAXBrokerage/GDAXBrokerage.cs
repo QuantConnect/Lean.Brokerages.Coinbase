@@ -95,7 +95,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
         public GDAXBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
-            IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+            IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
             : base(MarketName)
         {
             Initialize(
@@ -104,7 +104,6 @@ namespace QuantConnect.Brokerages.GDAX
                 apiSecret: apiSecret,
                 restApiUrl: restApiUrl,
                 algorithm: algorithm,
-                priceProvider: priceProvider,
                 aggregator: aggregator,
                 job: job
             );
@@ -121,7 +120,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
         protected void Initialize(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
-            IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator, LiveNodePacket job)
+            IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
         {
             if (IsInitialized)
             {
@@ -135,7 +134,6 @@ namespace QuantConnect.Brokerages.GDAX
             _job = job;
             _algorithm = algorithm;
             _aggregator = aggregator;
-            _priceProvider = priceProvider;
             _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
             _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
 
@@ -244,10 +242,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// </summary>
         public override void Disconnect()
         {
-            if (!_canceller.IsCancellationRequested)
-            {
-                _canceller.Cancel();
-            }
             WebSocket.Close();
         }
 
@@ -376,9 +370,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// </summary>
         public override void Dispose()
         {
-            _ctsFillMonitor.Cancel();
-
-            _canceller.DisposeSafely();
             _aggregator.DisposeSafely();
 
             _webSocketRateLimit.DisposeSafely();

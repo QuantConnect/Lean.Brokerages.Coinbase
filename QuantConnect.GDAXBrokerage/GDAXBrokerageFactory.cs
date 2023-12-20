@@ -80,12 +80,11 @@ namespace QuantConnect.Brokerages.GDAX
                 throw new ArgumentException(string.Join(Environment.NewLine, errors));
             }
 
-            var priceProvider = new ApiPriceProvider(job.UserId, job.UserToken);
             var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
                 Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
                 forceTypeNameOnExisting: false);
 
-            var brokerage = new GDAXBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, priceProvider, aggregator, job);
+            var brokerage = new GDAXBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, aggregator, job);
 
             // Add the brokerage to the composer to ensure its accessible to the live data feed.
             Composer.Instance.AddPart<IDataQueueHandler>(brokerage);

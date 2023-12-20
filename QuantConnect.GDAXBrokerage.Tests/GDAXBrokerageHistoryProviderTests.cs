@@ -38,7 +38,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
             var brokerage = new GDAXBrokerage(
                 Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com"),
-                Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-api-url"), null, null, aggregator, null);
+                Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-api-url"), null, aggregator, null);
 
             var historyProvider = new BrokerageHistoryProvider();
             historyProvider.SetBrokerage(brokerage);

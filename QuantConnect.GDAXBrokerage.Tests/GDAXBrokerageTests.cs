@@ -59,9 +59,6 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         [SetUp]
         public void Setup()
         {
-            var priceProvider = new Mock<IPriceProvider>();
-            priceProvider.Setup(x => x.GetLastPrice(It.IsAny<Symbol>())).Returns(1.234m);
-
             _rest.Setup(e => e.BuildUri(It.IsAny<IRestRequest>()))
                 .Returns((IRestRequest request) => new Uri("http://localhost"))
                 .Verifiable();
@@ -101,7 +98,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
                     StatusCode = HttpStatusCode.OK
                 });
 
-            _unit = new GDAXFakeDataQueueHandler("wss://localhost", "abc", "MTIz", "http://localhost", _algo.Object, priceProvider.Object, new AggregationManager());
+            _unit = new GDAXFakeDataQueueHandler("wss://localhost", "abc", "MTIz", "http://localhost", _algo.Object, new AggregationManager());
 
             _fillData = File.ReadAllText("TestData//gdax_fill.txt");
             _openOrderData = File.ReadAllText("TestData//gdax_openOrders.txt");
@@ -410,8 +407,8 @@ namespace QuantConnect.Tests.Brokerages.GDAX
         private class GDAXFakeDataQueueHandler : GDAXBrokerage
         {
             public GDAXFakeDataQueueHandler(string wssUrl, string apiKey, string apiSecret,
-                string restApiUrl, IAlgorithm algorithm, IPriceProvider priceProvider, IDataAggregator aggregator)
-            : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, priceProvider, aggregator, null)
+                string restApiUrl, IAlgorithm algorithm, IDataAggregator aggregator)
+            : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null)
             {
             }
 

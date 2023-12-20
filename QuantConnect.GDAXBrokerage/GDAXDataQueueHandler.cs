@@ -80,7 +80,6 @@ namespace QuantConnect.Brokerages.GDAX
                 apiSecret: job.BrokerageData["coinbase-api-secret"],
                 restApiUrl: job.BrokerageData["coinbase-api-url"],
                 algorithm: null,
-                priceProvider: new ApiPriceProvider(job.UserId, job.UserToken),
                 aggregator: aggregator,
                 job: job
             );
