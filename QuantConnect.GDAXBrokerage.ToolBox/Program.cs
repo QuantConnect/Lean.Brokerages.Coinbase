@@ -13,9 +13,9 @@
  * limitations under the License.
 */
 
+using System;
 using QuantConnect.Configuration;
 using QuantConnect.ToolBox.GDAXDownloader;
-using System;
 using static QuantConnect.Configuration.ApplicationParser;
 
 namespace QuantConnect.TemplateBrokerage.ToolBox
@@ -33,6 +33,11 @@ namespace QuantConnect.TemplateBrokerage.ToolBox
             if (!optionsObject.TryGetValue("app", out var targetApp))
             {
                 PrintMessageAndExit(1, "ERROR: --app value is required");
+            }
+
+            if(string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-key")) || string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-secret")))
+            {
+                PrintMessageAndExit(1, "ERROR: check configs: 'coinbase-api-key' or 'coinbase-api-secret'");
             }
 
             var targetAppName = targetApp.ToString();
