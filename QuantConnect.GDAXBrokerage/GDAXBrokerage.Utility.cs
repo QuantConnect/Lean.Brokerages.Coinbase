@@ -13,12 +13,6 @@
  * limitations under the License.
 */
 
-using System;
-using RestSharp;
-using System.Text;
-using System.Linq;
-using System.Globalization;
-using System.Security.Cryptography;
 using QuantConnect.CoinbaseBrokerage.Models;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
@@ -29,54 +23,6 @@ namespace QuantConnect.Brokerages.GDAX
     /// </summary>
     public partial class GDAXBrokerage
     {
-        /// <summary>
-        /// Sign Header
-        /// </summary>
-        public const string SignHeader = "CB-ACCESS-SIGN";
-        /// <summary>
-        /// Key Header
-        /// </summary>
-        public const string KeyHeader = "CB-ACCESS-KEY";
-        /// <summary>
-        /// Timestamp Header
-        /// </summary>
-        public const string TimeHeader = "CB-ACCESS-TIMESTAMP";
-        private const string Open = "OPEN";
-        private const string Pending = "pending";
-        private const string Active = "active";
-        private const string Done = "done";
-        private const string Settled = "settled";
-
-        /// <summary>
-        /// Creates an auth token to sign a request
-        /// </summary>
-        /// <param name="body">the request body as json</param>
-        /// <param name="method">the http method</param>
-        /// <param name="url">the request url</param>
-        /// <returns></returns>
-        public AuthenticationToken GetAuthenticationToken(string body, string method, string url)
-        {
-            var token = new AuthenticationToken
-            {
-                Key = ApiKey,
-                //todo: query time server to correct for time skew
-                Timestamp = Time.DateTimeToUnixTimeStamp(DateTime.UtcNow).ToString("F0", CultureInfo.InvariantCulture)
-            };
-
-            var prehash = token.Timestamp + method + url + body;
-
-            var hmacKey = Encoding.UTF8.GetBytes(ApiSecret);
-            var dataBytes = Encoding.UTF8.GetBytes(prehash);
-
-            using (var hmac = new HMACSHA256(hmacKey))
-            {
-                var sig = hmac.ComputeHash(dataBytes);
-                token.Signature = Convert.ToHexString(sig).ToLower();
-            }
-
-            return token;
-        }
-
         private static Orders.OrderStatus ConvertOrderStatus(CoinbaseOrder order)
         {
             if (order.CompletionPercentage > 0 && order.CompletionPercentage != 100)

@@ -91,7 +91,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="apiSecret">api secret</param>
         /// <param name="restApiUrl">api secret</param>
         /// <param name="algorithm">the algorithm instance is required to retreive account type</param>
-        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
         /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
         public GDAXBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
@@ -116,7 +115,6 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="apiKey">api key</param>
         /// <param name="apiSecret">api secret</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
-        /// <param name="priceProvider">The price provider for missing FX conversion rates</param>
         /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
         protected void Initialize(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
@@ -420,10 +418,10 @@ namespace QuantConnect.Brokerages.GDAX
                 var information = new Dictionary<string, object>()
                 {
                     {"productId", productId},
-                    {"machineName", System.Environment.MachineName},
-                    {"userName", System.Environment.UserName},
-                    {"domainName", System.Environment.UserDomainName},
-                    {"os", System.Environment.OSVersion}
+                    {"machineName", Environment.MachineName},
+                    {"userName", Environment.UserName},
+                    {"domainName", Environment.UserDomainName},
+                    {"os", Environment.OSVersion}
                 };
                 // IP and Mac Address Information
                 try
