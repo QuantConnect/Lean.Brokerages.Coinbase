@@ -21,12 +21,12 @@ using QuantConnect.Interfaces;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
-    /// An implementation of <see cref="IDataQueueHandler"/> for GDAX
+    /// An implementation of <see cref="IDataQueueHandler"/> for Coinbase
     /// </summary>
-    public partial class GDAXBrokerage : IDataQueueHandler
+    public partial class CoinbaseBrokerage : IDataQueueHandler
     {
         /// <summary>
         /// Data Aggregator

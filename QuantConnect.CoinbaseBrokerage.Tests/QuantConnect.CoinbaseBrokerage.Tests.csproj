@@ -9,10 +9,10 @@
         <Copyright>Copyright ©  2021</Copyright>
         <TestProjectType>UnitTest</TestProjectType>
         <OutputPath>bin\$(Configuration)\</OutputPath>
-        <Product>QuantConnect.GDAXBrokerage.Tests</Product>
-        <AssemblyName>QuantConnect.GDAXBrokerage.Tests</AssemblyName>
-        <RootNamespace>QuantConnect.GDAXBrokerage.Tests</RootNamespace>
-        <AssemblyTitle>QuantConnect.GDAXBrokerage.Tests</AssemblyTitle>
+        <Product>QuantConnect.CoinbaseBrokerage.Tests</Product>
+        <AssemblyName>QuantConnect.CoinbaseBrokerage.Tests</AssemblyName>
+        <RootNamespace>QuantConnect.CoinbaseBrokerage.Tests</RootNamespace>
+        <AssemblyTitle>QuantConnect.CoinbaseBrokerage.Tests</AssemblyTitle>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
 
@@ -28,8 +28,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\Lean\Tests\QuantConnect.Tests.csproj" />
-      <ProjectReference Include="..\QuantConnect.GDAXBrokerage.ToolBox\QuantConnect.GDAXBrokerage.ToolBox.csproj" />
-      <ProjectReference Include="..\QuantConnect.GDAXBrokerage\QuantConnect.GDAXBrokerage.csproj" />
+      <ProjectReference Include="..\QuantConnect.CoinbaseBrokerage.ToolBox\QuantConnect.CoinbaseBrokerage.ToolBox.csproj" />
+      <ProjectReference Include="..\QuantConnect.CoinbaseBrokerage\QuantConnect.CoinbaseBrokerage.csproj" />
     </ItemGroup>
 
     <ItemGroup>

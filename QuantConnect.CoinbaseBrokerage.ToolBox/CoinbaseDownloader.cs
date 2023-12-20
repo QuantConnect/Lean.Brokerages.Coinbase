@@ -21,14 +21,13 @@ using QuantConnect.Brokerages;
 using QuantConnect.Data.Market;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
-using QuantConnect.Brokerages.GDAX;
 
-namespace QuantConnect.ToolBox.GDAXDownloader
+namespace QuantConnect.CoinbaseBrokerage.ToolBox
 {
     /// <summary>
-    /// GDAX Data Downloader class
+    /// Coinbase Data Downloader class
     /// </summary>
-    public class GDAXDownloader : IDataDownloader
+    public class CoinbaseDownloader : IDataDownloader
     {
         /// <summary>
         /// Get historical data enumerable for a single symbol, type and resolution given this start and end time (in UTC).
@@ -77,7 +76,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
         /// A new instance of the <see cref="Brokerage"/> class configured for Coinbase integration.
         /// </returns>
         /// <seealso cref="Brokerage"/>
-        /// <seealso cref="GDAXBrokerage"/>
+        /// <seealso cref="CoinbaseBrokerage"/>
         /// <example>
         /// <code>
         /// var coinbaseBrokerage = CreateBrokerage();
@@ -89,7 +88,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
             var apiKey = Config.Get("coinbase-api-key", "");
             var apiSecret = Config.Get("coinbase-api-secret", "");
             var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
-            return new GDAXBrokerage(string.Empty, apiKey, apiSecret, restApiUrl, null, null, null);
+            return new CoinbaseBrokerage(string.Empty, apiKey, apiSecret, restApiUrl, null, null, null);
         }
     }
 }

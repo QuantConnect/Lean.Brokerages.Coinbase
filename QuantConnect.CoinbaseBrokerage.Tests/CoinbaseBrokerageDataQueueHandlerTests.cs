@@ -20,17 +20,16 @@ using QuantConnect.Data;
 using QuantConnect.Logging;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
-using QuantConnect.Brokerages.GDAX;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     /// <summary>
     /// The class contains DataQueueHandler's tests
     /// </summary>
     [TestFixture]
-    public partial class GDAXBrokerageIntegrationTests
+    public partial class CoinbaseBrokerageTests
     {
-        private GDAXBrokerage _brokerage { get => (GDAXBrokerage)Brokerage; }
+        private CoinbaseBrokerage _brokerage { get => (CoinbaseBrokerage)Brokerage; }
 
         private static readonly Symbol BTCUSDC = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX);
 

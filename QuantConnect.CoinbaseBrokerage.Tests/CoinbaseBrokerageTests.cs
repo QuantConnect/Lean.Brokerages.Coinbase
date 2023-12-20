@@ -13,23 +13,23 @@
  * limitations under the License.
 */
 
+using Moq;
 using System;
 using NUnit.Framework;
+using QuantConnect.Orders;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
-using QuantConnect.Configuration;
-using QuantConnect.Orders;
-using Moq;
 using QuantConnect.Brokerages;
-using QuantConnect.Tests.Common.Securities;
-using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.Configuration;
+using QuantConnect.Tests.Brokerages;
 using QuantConnect.CoinbaseBrokerage.Api;
-using QuantConnect.Brokerages.GDAX;
+using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.Tests.Common.Securities;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     [TestFixture]
-    public partial class GDAXBrokerageIntegrationTests : BrokerageTests
+    public partial class CoinbaseBrokerageTests : BrokerageTests
     {
         #region Properties
         protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX);
@@ -73,7 +73,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
 
             _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
 
-            return new GDAXBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, new AggregationManager(), null);
+            return new CoinbaseBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, new AggregationManager(), null);
         }
 
         /// <summary>
@@ -96,10 +96,9 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             Assert.Pass("Order update not supported");
         }
 
-        [Test]
+        [Test(Description = "Coinbase doesn't support margin trading")]
         public override void GetAccountHoldings()
         {
-            // GDAX GetAccountHoldings() always returns an empty list
             Assert.That(Brokerage.GetAccountHoldings().Count == 0);
         }
 

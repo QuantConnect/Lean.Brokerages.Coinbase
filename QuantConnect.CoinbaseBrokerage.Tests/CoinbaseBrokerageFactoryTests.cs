@@ -14,19 +14,18 @@
 */
 
 using NUnit.Framework;
-using QuantConnect.Brokerages.GDAX;
-using QuantConnect.Interfaces;
 using QuantConnect.Util;
+using QuantConnect.Interfaces;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     [TestFixture]
-    public class GDAXBrokerageFactoryTests
+    public class CoinbaseBrokerageFactoryTests
     {
         [Test]
         public void InitializesFactoryFromComposer()
         {
-            using var factory = Composer.Instance.Single<IBrokerageFactory>(instance => instance.BrokerageType == typeof(GDAXBrokerage));
+            using var factory = Composer.Instance.Single<IBrokerageFactory>(instance => instance.BrokerageType == typeof(CoinbaseBrokerage));
             Assert.IsNotNull(factory);
         }
     }

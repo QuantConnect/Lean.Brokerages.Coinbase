@@ -16,12 +16,12 @@
 using QuantConnect.CoinbaseBrokerage.Models;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
-    /// Utility methods for GDAX brokerage
+    /// Utility methods for Coinbase brokerage
     /// </summary>
-    public partial class GDAXBrokerage
+    public partial class CoinbaseBrokerage
     {
         private static Orders.OrderStatus ConvertOrderStatus(CoinbaseOrder order)
         {

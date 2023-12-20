@@ -14,24 +14,22 @@
 */
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using NUnit.Framework;
-using QuantConnect.Algorithm;
-using QuantConnect.Brokerages;
-using QuantConnect.Brokerages.GDAX;
-using QuantConnect.Configuration;
+using System.Threading;
 using QuantConnect.Data;
-using QuantConnect.Interfaces;
-using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
+using QuantConnect.Algorithm;
+using QuantConnect.Interfaces;
+using QuantConnect.Configuration;
+using System.Collections.Generic;
+using QuantConnect.Lean.Engine.DataFeeds;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     [TestFixture]
-    public class GDAXBrokerageAdditionalTests
+    public class CoinbaseBrokerageAdditionalTests
     {
         [Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
         [TestCase(5)]
@@ -107,7 +105,7 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             }
         }
 
-        private static TestGDAXDataQueueHandler GetBrokerage()
+        private static TestCoinbaseDataQueueHandler GetBrokerage()
         {
             var wssUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
             var apiKey = Config.Get("coinbase-api-key");
@@ -116,12 +114,12 @@ namespace QuantConnect.Tests.Brokerages.GDAX
             var algorithm = new QCAlgorithm();
             var aggregator = new AggregationManager();
 
-            return new TestGDAXDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
+            return new TestCoinbaseDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
         }
 
-        private class TestGDAXDataQueueHandler : GDAXBrokerage
+        private class TestCoinbaseDataQueueHandler : CoinbaseBrokerage
         {
-            public TestGDAXDataQueueHandler(string wssUrl, string apiKey,
+            public TestCoinbaseDataQueueHandler(string wssUrl, string apiKey,
                 string apiSecret,
                 string restApiUrl,
                 IAlgorithm algorithm,

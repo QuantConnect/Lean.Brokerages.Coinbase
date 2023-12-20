@@ -18,15 +18,16 @@ using QuantConnect.Data;
 using QuantConnect.Util;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
+using QuantConnect.Brokerages;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
     /// Factory method to create Coinbase WebSockets brokerage
     /// </summary>
-    public class GDAXBrokerageFactory : BrokerageFactory
+    public class CoinbaseBrokerageFactory : BrokerageFactory
     {
         /// <summary>
         /// Gets the brokerage data required to run the brokerage from configuration/disk
@@ -49,9 +50,9 @@ namespace QuantConnect.Brokerages.GDAX
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="GDAXBrokerageFactory"/> class
+        /// Initializes a new instance of the <see cref="CoinbaseBrokerageFactory"/> class
         /// </summary>
-        public GDAXBrokerageFactory() : base(typeof(GDAXBrokerage))
+        public CoinbaseBrokerageFactory() : base(typeof(CoinbaseBrokerage))
         { }
 
         /// <summary>
@@ -84,7 +85,7 @@ namespace QuantConnect.Brokerages.GDAX
                 Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
                 forceTypeNameOnExisting: false);
 
-            var brokerage = new GDAXBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, aggregator, job);
+            var brokerage = new CoinbaseBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, aggregator, job);
 
             // Add the brokerage to the composer to ensure its accessible to the live data feed.
             Composer.Instance.AddPart<IDataQueueHandler>(brokerage);

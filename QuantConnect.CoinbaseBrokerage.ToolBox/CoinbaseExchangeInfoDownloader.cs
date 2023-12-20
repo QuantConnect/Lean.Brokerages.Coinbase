@@ -13,20 +13,21 @@
  * limitations under the License.
 */
 
+using System;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Logging;
-using QuantConnect.ToolBox.GDAXDownloader.Models;
-using System;
+using QuantConnect.ToolBox;
 using System.Collections.Generic;
-using System.Linq;
+using QuantConnect.CoinbaseBrokerage.ToolBox.Models;
 
-namespace QuantConnect.ToolBox.GDAXDownloader
+namespace QuantConnect.CoinbaseBrokerage.ToolBox
 {
     /// <summary>
-    /// GDAX implementation of <see cref="IExchangeInfoDownloader"/>
+    /// Coinbase implementation of <see cref="IExchangeInfoDownloader"/>
     /// </summary>
-    public class GDAXExchangeInfoDownloader : IExchangeInfoDownloader
+    public class CoinbaseExchangeInfoDownloader : IExchangeInfoDownloader
     {
         private readonly Dictionary<string, string> _idNameMapping = new();
 
@@ -38,7 +39,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
         /// <summary>
         /// Creats an instance of the class
         /// </summary>
-        public GDAXExchangeInfoDownloader()
+        public CoinbaseExchangeInfoDownloader()
         {
             _idNameMapping = GetCurrencyDetails();
         }
@@ -88,7 +89,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
                 }
                 catch (Exception e)
                 {
-                    Log.Trace($"GDAXExchangeInfoDownloader.GetCurrencyNameById(): {e}");
+                    Log.Trace($"{nameof(CoinbaseExchangeInfoDownloader)}:{nameof(GetCurrencyDetails)}: {e}");
                 }
             }
             return idNameMapping;

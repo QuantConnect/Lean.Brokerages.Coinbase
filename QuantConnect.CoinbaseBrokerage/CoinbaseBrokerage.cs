@@ -27,6 +27,7 @@ using QuantConnect.Orders;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
+using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders.Fees;
@@ -38,13 +39,13 @@ using System.Net.NetworkInformation;
 using QuantConnect.CoinbaseBrokerage.Api;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
-    /// Represents a partial class for interacting with the GDAX brokerage using WebSocket communication.
+    /// Represents a partial class for interacting with the Coinbase brokerage using WebSocket communication.
     /// </summary>
-    [BrokerageFactory(typeof(GDAXBrokerageFactory))]
-    public partial class GDAXBrokerage : BaseWebsocketsBrokerage
+    [BrokerageFactory(typeof(CoinbaseBrokerageFactory))]
+    public partial class CoinbaseBrokerage : BaseWebsocketsBrokerage
     {
         /// <summary>
         /// Live job task packet: container for any live specific job variables
@@ -77,14 +78,14 @@ namespace QuantConnect.Brokerages.GDAX
         public override bool IsConnected => WebSocket.IsOpen;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="GDAXBrokerage"/> class with the specified name.
+        /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with the specified name.
         /// </summary>
         /// <param name="name">The name associated with the Coinbase brokerage instance.</param>
-        public GDAXBrokerage(string name) : base(name)
+        public CoinbaseBrokerage(string name) : base(name)
         { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="GDAXBrokerage"/> class with set of parameters.
+        /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with set of parameters.
         /// </summary>
         /// <param name="webSocketUrl">WebSockets url</param>
         /// <param name="apiKey">api key</param>
@@ -93,7 +94,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// <param name="algorithm">the algorithm instance is required to retreive account type</param>
         /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public GDAXBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+        public CoinbaseBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
             IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
             : base(MarketName)
         {
@@ -132,7 +133,7 @@ namespace QuantConnect.Brokerages.GDAX
             _job = job;
             _algorithm = algorithm;
             _aggregator = aggregator;
-            _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
+            _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(MarketName);
             _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
 
             FillSplit = new ConcurrentDictionary<long, GDAXFill>();
@@ -199,7 +200,7 @@ namespace QuantConnect.Brokerages.GDAX
         /// <returns></returns>
         public override bool UpdateOrder(Order order)
         {
-            throw new NotSupportedException("GDAXBrokerage.UpdateOrder: Order update not supported. Please cancel and re-create.");
+            throw new NotSupportedException($"{nameof(CoinbaseBrokerage)}:{nameof(UpdateOrder)}: Order update not supported. Please cancel and re-create.");
         }
 
         /// <summary>
@@ -257,7 +258,7 @@ namespace QuantConnect.Brokerages.GDAX
             {
                 Order leanOrder = default;
 
-                var symbol = _symbolMapper.GetLeanSymbol(order.ProductId, SecurityType.Crypto, Market.GDAX);
+                var symbol = _symbolMapper.GetLeanSymbol(order.ProductId, SecurityType.Crypto, MarketName);
 
                 if (order.OrderConfiguration.MarketIoc != null)
                 {
@@ -389,7 +390,7 @@ namespace QuantConnect.Brokerages.GDAX
 
         #endregion
 
-        private class ModulesReadLicenseRead : Api.RestResponse
+        private class ModulesReadLicenseRead : QuantConnect.Api.RestResponse
         {
             [JsonProperty(PropertyName = "license")]
             public string License;

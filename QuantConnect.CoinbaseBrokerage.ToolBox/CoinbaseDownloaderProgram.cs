@@ -19,22 +19,23 @@ using QuantConnect.Data;
 using QuantConnect.Util;
 using QuantConnect.Logging;
 using System.Globalization;
+using QuantConnect.ToolBox;
 using System.Collections.Generic;
 
-namespace QuantConnect.ToolBox.GDAXDownloader
+namespace QuantConnect.CoinbaseBrokerage.ToolBox
 {
-    public static class GDAXDownloaderProgram
+    public static class CoinbaseDownloaderProgram
     {
         /// <summary>
-        /// GDAX Downloader Toolbox Project For LEAN Algorithmic Trading Engine.
+        /// Coinbase Downloader Toolbox Project For LEAN Algorithmic Trading Engine.
         /// </summary>
-        public static void GDAXDownloader(IList<string> tickers, string resolution, DateTime fromDate, DateTime toDate)
+        public static void CoinbaseDownloader(IList<string> tickers, string resolution, DateTime fromDate, DateTime toDate)
         {
             Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
 
             if (resolution.IsNullOrEmpty() || tickers.IsNullOrEmpty())
             {
-                Console.WriteLine("GDAXDownloader ERROR: '--tickers=' or '--resolution=' parameter is missing");
+                Console.WriteLine($"{nameof(CoinbaseDownloader)}:ERROR: '--tickers=' or '--resolution=' parameter is missing");
                 Console.WriteLine("--tickers=ETHUSD,ETHBTC,BTCUSD,etc.");
                 Console.WriteLine("--resolution=Second/Minute/Hour/Daily");
                 Environment.Exit(1);
@@ -44,10 +45,10 @@ namespace QuantConnect.ToolBox.GDAXDownloader
             {
                 // Load settings from config.json
                 var dataDirectory = Globals.DataFolder;
-                //todo: will download any exchange but always save as gdax
+                //todo: will download any exchange but always save as coinbase
                 // Create an instance of the downloader
                 const string market = Market.GDAX;
-                var downloader = new GDAXDownloader();
+                var downloader = new CoinbaseDownloader();
                 foreach (var ticker in tickers)
                 {
                     // Download the data
@@ -78,7 +79,7 @@ namespace QuantConnect.ToolBox.GDAXDownloader
         /// </summary>
         public static void ExchangeInfoDownloader()
         {
-            new ExchangeInfoUpdater(new GDAXExchangeInfoDownloader())
+            new ExchangeInfoUpdater(new CoinbaseExchangeInfoDownloader())
                 .Run();
         }
     }

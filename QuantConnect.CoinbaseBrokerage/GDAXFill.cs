@@ -13,11 +13,10 @@
  * limitations under the License.
 */
 
-using QuantConnect.Brokerages.GDAX.Messages;
-using System.Collections.Generic;
 using System.Linq;
+using System.Collections.Generic;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
     /// Tracks fill messages

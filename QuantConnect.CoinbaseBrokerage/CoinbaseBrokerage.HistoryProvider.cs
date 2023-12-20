@@ -16,21 +16,22 @@
 using System;
 using QuantConnect.Data;
 using QuantConnect.Logging;
+using QuantConnect.Brokerages;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
     /// <summary>
-    /// GDAX Brokerage - IHistoryProvider implementation
+    /// Coinbase Brokerage - IHistoryProvider implementation
     /// </summary>
-    public partial class GDAXBrokerage
+    public partial class CoinbaseBrokerage
     {
         /// <summary>
         /// Prevent spam to external source
         /// </summary>
-        private bool _loggedGDAXSupportsOnlyTradeBars = false;
+        private bool _loggedCoinbaseSupportsOnlyTradeBars = false;
 
         /// <summary>
         /// Gets the history for the requested security
@@ -39,14 +40,14 @@ namespace QuantConnect.Brokerages.GDAX
         /// <returns>An enumerable of bars covering the span specified in the request</returns>
         public override IEnumerable<BaseData> GetHistory(HistoryRequest request)
         {
-            // GDAX API only allows us to support history requests for TickType.Trade
+            // Coinbase API only allows us to support history requests for TickType.Trade
             if (request.TickType != TickType.Trade)
             {
-                if (!_loggedGDAXSupportsOnlyTradeBars)
+                if (!_loggedCoinbaseSupportsOnlyTradeBars)
                 {
-                    _loggedGDAXSupportsOnlyTradeBars = true;
-                    _algorithm?.Debug("Warning: GDAXBrokerage history provider only supports trade information, does not support quotes.");
-                    Log.Error($"{nameof(GDAXBrokerage)}.{nameof(GetHistory)}(): only supports TradeBars");
+                    _loggedCoinbaseSupportsOnlyTradeBars = true;
+                    _algorithm?.Debug($"Warning:{nameof(CoinbaseBrokerage)}: history provider only supports trade information, does not support quotes.");
+                    Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}(): only supports TradeBars");
                 }
                 yield break;
             }
@@ -79,8 +80,6 @@ namespace QuantConnect.Brokerages.GDAX
                 yield break;
             }
 
-            // Log.Trace($"GDAXBrokerage.GetHistory(): Submitting request: {request.Symbol.Value}: {request.Resolution} {request.StartTimeUtc} UTC -> {request.EndTimeUtc} UTC");
-
             foreach (var tradeBar in GetHistoryFromCandles(request))
             {
                 yield return tradeBar;
@@ -88,7 +87,7 @@ namespace QuantConnect.Brokerages.GDAX
         }
 
         /// <summary>
-        /// Returns TradeBars from GDAX candles (only for Minute/Hour/Daily resolutions)
+        /// Returns TradeBars from Coinbase candles (only for Minute/Hour/Daily resolutions)
         /// </summary>
         /// <param name="request">The history request instance</param>
         private IEnumerable<TradeBar> GetHistoryFromCandles(HistoryRequest request)
@@ -124,7 +123,7 @@ namespace QuantConnect.Brokerages.GDAX
                 {
                     if (candle.Start.UtcDateTime < startTime)
                     {
-                        // Note from GDAX docs:
+                        // Note from Coinbase docs:
                         // If data points are readily available, your response may contain as many as 300 candles
                         // and some of those candles may precede your declared start value.
                         yield break;

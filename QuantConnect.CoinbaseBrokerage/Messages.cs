@@ -16,7 +16,7 @@
 using System;
 using Newtonsoft.Json;
 
-namespace QuantConnect.Brokerages.GDAX.Messages
+namespace QuantConnect.CoinbaseBrokerage
 {
     public class Fill
     {

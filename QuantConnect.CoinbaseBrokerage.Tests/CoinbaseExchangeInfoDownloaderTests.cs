@@ -13,21 +13,21 @@
  * limitations under the License.
 */
 
-using NUnit.Framework;
-using QuantConnect.ToolBox;
-using QuantConnect.Util;
 using System;
 using System.Linq;
+using NUnit.Framework;
+using QuantConnect.Util;
+using QuantConnect.ToolBox;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     [TestFixture]
-    public class GDAXExchangeInfoDownloaderTests
+    public class CoinbaseExchangeInfoDownloaderTests
     {
         [Test]
         public void GetsExchangeInfo()
         {
-            var eid = Composer.Instance.GetExportedValueByTypeName<IExchangeInfoDownloader>("GDAXExchangeInfoDownloader");
+            var eid = Composer.Instance.GetExportedValueByTypeName<IExchangeInfoDownloader>("CoinbaseExchangeInfoDownloader");
             var tickers = eid.Get().ToList();
 
             Assert.IsTrue(tickers.Any());

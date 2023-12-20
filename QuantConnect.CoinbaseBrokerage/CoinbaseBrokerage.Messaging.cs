@@ -16,14 +16,12 @@
 using System;
 using System.Linq;
 using Newtonsoft.Json;
-using System.Threading;
 using QuantConnect.Util;
 using QuantConnect.Orders;
 using QuantConnect.Logging;
 using Newtonsoft.Json.Linq;
-using System.Threading.Tasks;
-using QuantConnect.Interfaces;
 using QuantConnect.Securities;
+using QuantConnect.Brokerages;
 using QuantConnect.Orders.Fees;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
@@ -33,9 +31,9 @@ using QuantConnect.CoinbaseBrokerage.Models.Enums;
 using QuantConnect.CoinbaseBrokerage.Models.Constants;
 using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
 
-namespace QuantConnect.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage
 {
-    public partial class GDAXBrokerage
+    public partial class CoinbaseBrokerage
     {
         /// <summary>
         /// Represents a collection of order books associated with symbols in a thread-safe manner.
@@ -57,9 +55,9 @@ namespace QuantConnect.Brokerages.GDAX
 
         private void SubscribeOnWebSocketFeed(object _, EventArgs __)
         {
-            Log.Debug($"{nameof(GDAXBrokerage)}:Open on Heartbeats channel");
+            Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
             ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
-            Log.Debug($"{nameof(GDAXBrokerage)}:Connect: on User channel");
+            Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
             ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
         }
 
@@ -72,7 +70,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
 
-            Log.Debug($"GDAXBrokerage.OnMessage: {data.Message}");
+            Log.Debug($"{nameof(CoinbaseBrokerage)}:{nameof(OnMessage)}: {data.Message}");
 
             try
             {
@@ -122,7 +120,7 @@ namespace QuantConnect.Brokerages.GDAX
 
         private void Level2Snapshot(CoinbaseLevel2Event snapshotData)
         {
-            var symbol = _symbolMapper.GetLeanSymbol(snapshotData.ProductId, SecurityType.Crypto, Market.GDAX);
+            var symbol = _symbolMapper.GetLeanSymbol(snapshotData.ProductId, SecurityType.Crypto, MarketName);
 
             DefaultOrderBook orderBook;
             if (!_orderBooks.TryGetValue(symbol, out orderBook))
@@ -162,7 +160,7 @@ namespace QuantConnect.Brokerages.GDAX
 
         private void Level2Update(CoinbaseLevel2Event updateData)
         {
-            var leanSymbol = _symbolMapper.GetLeanSymbol(updateData.ProductId, SecurityType.Crypto, Market.GDAX);
+            var leanSymbol = _symbolMapper.GetLeanSymbol(updateData.ProductId, SecurityType.Crypto, MarketName);
 
             if (!_orderBooks.TryGetValue(leanSymbol, out var orderBook))
             {
@@ -202,7 +200,7 @@ namespace QuantConnect.Brokerages.GDAX
         {
             foreach (var trade in tradeUpdates.Trades)
             {
-                var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, Market.GDAX);
+                var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, MarketName);
 
                 _aggregator.Update(new Tick
                 {
@@ -216,9 +214,9 @@ namespace QuantConnect.Brokerages.GDAX
             }
         }
 
-        private void EmitFillOrderEvent(Messages.Fill fill, Order order)
+        private void EmitFillOrderEvent(Fill fill, Order order)
         {
-            var symbol = _symbolMapper.GetLeanSymbol(fill.ProductId, SecurityType.Crypto, Market.GDAX);
+            var symbol = _symbolMapper.GetLeanSymbol(fill.ProductId, SecurityType.Crypto, MarketName);
 
             if (!FillSplit.ContainsKey(order.Id))
             {
@@ -309,7 +307,7 @@ namespace QuantConnect.Brokerages.GDAX
                 }
                 else if (item.SecurityType == SecurityType.Crypto)
                 {
-                    Log.Error($"Unknown GDAX symbol: {item.Value}");
+                    Log.Error($"{nameof(CoinbaseBrokerage)}:{nameof(Subscribe)}: Unknown symbol: {item.Value}");
                 }
             }
 
@@ -355,12 +353,12 @@ namespace QuantConnect.Brokerages.GDAX
         {
             if (string.IsNullOrWhiteSpace(channel))
             {
-                throw new ArgumentException($"{nameof(GDAXBrokerage)}:SubscribeToChannel: ChannelRequired:", nameof(channel));
+                throw new ArgumentException($"{nameof(CoinbaseBrokerage)}:SubscribeToChannel: ChannelRequired:", nameof(channel));
             }
 
             if (!IsConnected)
             {
-                throw new InvalidOperationException($"{nameof(GDAXBrokerage)}:SubscribeToChannel: WebSocketMustBeConnected");
+                throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}:SubscribeToChannel: WebSocketMustBeConnected");
             }
 
             productIds ??= new List<string> { "" };

@@ -16,10 +16,10 @@
 
 using Newtonsoft.Json;
 
-namespace QuantConnect.ToolBox.GDAXDownloader.Models
+namespace QuantConnect.CoinbaseBrokerage.ToolBox.Models
 {
     /// <summary>
-    /// Represents GDAX exchange info for a product
+    /// Represents Coinbase exchange info for a product
     /// </summary>
     public class Product
     {

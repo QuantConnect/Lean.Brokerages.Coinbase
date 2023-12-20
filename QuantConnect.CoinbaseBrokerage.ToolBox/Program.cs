@@ -15,10 +15,9 @@
 
 using System;
 using QuantConnect.Configuration;
-using QuantConnect.ToolBox.GDAXDownloader;
 using static QuantConnect.Configuration.ApplicationParser;
 
-namespace QuantConnect.TemplateBrokerage.ToolBox
+namespace QuantConnect.CoinbaseBrokerage.ToolBox
 {
     internal static class Program
     {
@@ -49,11 +48,11 @@ namespace QuantConnect.TemplateBrokerage.ToolBox
                 var toDate = optionsObject.ContainsKey("to-date")
                     ? Parse.DateTimeExact(optionsObject["to-date"].ToString(), "yyyyMMdd-HH:mm:ss")
                     : DateTime.UtcNow;
-                GDAXDownloaderProgram.GDAXDownloader(tickers, resolution, fromDate, toDate);
+                CoinbaseDownloaderProgram.CoinbaseDownloader(tickers, resolution, fromDate, toDate);
             }
             else if (targetAppName.Contains("updater") || targetAppName.EndsWith("spu"))
             {
-                GDAXDownloaderProgram.ExchangeInfoDownloader();
+                CoinbaseDownloaderProgram.ExchangeInfoDownloader();
             }
             else
             {

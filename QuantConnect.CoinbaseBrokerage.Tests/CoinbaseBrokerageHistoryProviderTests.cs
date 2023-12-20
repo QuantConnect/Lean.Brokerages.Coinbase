@@ -18,25 +18,25 @@ using NodaTime;
 using System.Linq;
 using NUnit.Framework;
 using QuantConnect.Data;
+using QuantConnect.Tests;
 using QuantConnect.Logging;
 using QuantConnect.Securities;
 using QuantConnect.Data.Market;
 using QuantConnect.Configuration;
-using QuantConnect.Brokerages.GDAX;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Lean.Engine.HistoricalData;
 
-namespace QuantConnect.Tests.Brokerages.GDAX
+namespace QuantConnect.CoinbaseBrokerage.Tests
 {
     [TestFixture]
-    public class GDAXBrokerageHistoryProviderTests
+    public class CoinbaseBrokerageHistoryProviderTests
     {
         [Test, TestCaseSource(nameof(TestParameters))]
         public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool shouldBeEmpty)
         {
             var aggregator = new AggregationManager();
 
-            var brokerage = new GDAXBrokerage(
+            var brokerage = new CoinbaseBrokerage(
                 Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com"),
                 Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-api-url"), null, aggregator, null);
 
