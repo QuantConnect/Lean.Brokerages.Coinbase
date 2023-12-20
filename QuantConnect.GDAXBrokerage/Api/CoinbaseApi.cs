@@ -204,7 +204,8 @@ public class CoinbaseApi : IDisposable
                 if (leanOrder.Direction == OrderDirection.Buy)
                 {
                     var price = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
-                    model.OrderConfiguration.MarketIoc.QuoteSize = price * Math.Abs(leanOrder.Quantity);
+                    var minimumPriceVariation = SecurityProvider.GetSecurity(leanOrder.Symbol).SymbolProperties.MinimumPriceVariation;
+                    model.OrderConfiguration.MarketIoc.QuoteSize = Math.Round(price * Math.Abs(leanOrder.Quantity) / minimumPriceVariation) * minimumPriceVariation;
                 }
                 else
                 {
@@ -311,7 +312,6 @@ public class CoinbaseApi : IDisposable
 
         return tickerPrice;
     }
-
 
     /// <summary>
     /// Performs application-defined tasks associated with freeing, releasing, or resetting resources.
