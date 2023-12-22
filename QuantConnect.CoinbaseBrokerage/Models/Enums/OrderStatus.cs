@@ -19,27 +19,51 @@ using System.Runtime.Serialization;
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
+/// <summary>
+/// Coinbase available order status
+/// </summary>
 [JsonConverter(typeof(StringEnumConverter))]
 public enum OrderStatus
 {
+    /// <summary>
+    /// Unknown order status
+    /// </summary>
     [EnumMember(Value = "UNKNOWN_ORDER_STATUS")]
     UnknownOrderStatus,
 
+    /// <summary>
+    /// Order is not yet open
+    /// </summary>
     [EnumMember(Value = "PENDING")]
     Pending,
 
+    /// <summary>
+    /// Order is waiting to be fully filled
+    /// </summary>
     [EnumMember(Value = "OPEN")]
     Open,
 
+    /// <summary>
+    /// Order is 100% filled
+    /// </summary>
     [EnumMember(Value = "FILLED")]
     Filled,
 
+    /// <summary>
+    /// Order was cancelled by user or system
+    /// </summary>
     [EnumMember(Value = "CANCELLED")]
     Cancelled,
 
+    /// <summary>
+    /// TWAP(Time-weighted average price) order was not filled by the expiry time
+    /// </summary>
     [EnumMember(Value = "EXPIRED")]
     Expired,
 
+    /// <summary>
+    /// Order cannot be placed at all
+    /// </summary>
     [EnumMember(Value = "FAILED")]
     Failed,
 }

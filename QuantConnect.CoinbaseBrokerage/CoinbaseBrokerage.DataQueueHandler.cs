@@ -80,6 +80,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 apiSecret: job.BrokerageData["coinbase-api-secret"],
                 restApiUrl: job.BrokerageData["coinbase-api-url"],
                 algorithm: null,
+                orderProvider: null,
                 aggregator: aggregator,
                 job: job
             );

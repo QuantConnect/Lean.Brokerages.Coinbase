@@ -16,10 +16,12 @@
 using System;
 using System.Linq;
 using Newtonsoft.Json;
+using System.Threading;
 using QuantConnect.Util;
 using QuantConnect.Orders;
 using QuantConnect.Logging;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 using QuantConnect.Securities;
 using QuantConnect.Brokerages;
 using QuantConnect.Orders.Fees;
@@ -47,6 +49,16 @@ namespace QuantConnect.CoinbaseBrokerage
         private RateGate _webSocketRateLimit = new(750, TimeSpan.FromSeconds(1));
 
         /// <summary>
+        /// Use to sync subscription process on WebSocket User Updates
+        /// </summary>
+        private readonly ManualResetEvent _webSocketSubscriptionOnUserUpdateResetEvent = new(false);
+
+        /// <summary>
+        /// Cancellation token source associated with this instance.
+        /// </summary>
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+        /// <summary>
         /// Collection of partial split messages
         /// </summary>
         public ConcurrentDictionary<long, GDAXFill> FillSplit { get; set; }
@@ -55,10 +67,21 @@ namespace QuantConnect.CoinbaseBrokerage
 
         private void SubscribeOnWebSocketFeed(object _, EventArgs __)
         {
+            // launch a task so we don't block WebSocket and can send and receive
+            Task.Factory.StartNew(() =>
+            {
             Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
-            ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
+
+                _webSocketSubscriptionOnUserUpdateResetEvent.Reset();
             Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
-            ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+
+                if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+                {
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe to channels"));
+                }
+            }, _cancellationTokenSource.Token);
         }
 
         /// <summary>
@@ -78,12 +101,6 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
 
-                if( channel == null ) 
-                {
-                    // We got this error from `user` channel
-                    // obj["message"] {failure to subscribe}
-                }
-
                 switch (channel)
                 {
                     case CoinbaseWebSocketChannels.MarketTrades:
@@ -95,6 +112,14 @@ namespace QuantConnect.CoinbaseBrokerage
                         break;
                     case CoinbaseWebSocketChannels.User:
                         var message2 = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
+                        var orderUpdate = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
+                        if(orderUpdate.Events[0].Type == WebSocketEventType.Snapshot)
+                        {
+                            // When we have subscribed to whatever channel we should send signal to event 
+                            _webSocketSubscriptionOnUserUpdateResetEvent.Set();
+                            break;
+                        }
+                        HandleOrderUpdate(orderUpdate.Events[0].Orders);
                         break;
                     case CoinbaseWebSocketChannels.Level2Response:
                         var level2Data = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseLevel2Event>>();
@@ -116,6 +141,21 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {ex.Message} Exception: {ex}"));
             }
+        }
+
+        private void HandleOrderUpdate(List<CoinbaseWebSocketOrderResponse> orders)
+        {
+            foreach(var order in orders)
+            {
+                var leanOrder = OrderProvider.GetOrdersByBrokerageId(order.OrderId).FirstOrDefault();
+
+                if (leanOrder == null)
+                {
+                    continue;
+                }
+
+
+        }
         }
 
         private void Level2Snapshot(CoinbaseLevel2Event snapshotData)
@@ -360,8 +400,6 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}:SubscribeToChannel: WebSocketMustBeConnected");
             }
-
-            productIds ??= new List<string> { "" };
 
             var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
 

@@ -23,41 +23,77 @@ namespace QuantConnect.CoinbaseBrokerage.Models.WebSocket;
 public class CoinbaseUserEvent : WebSocketEvent
 {
     [JsonProperty("orders")]
-    public List<CoinbaseOrder> Orders { get; set; }
+    public List<CoinbaseWebSocketOrderResponse> Orders { get; set; }
 }
 
-public class CoinbaseOrder
+/// <summary>
+/// Represents a response from the Coinbase WebSocket for order-related information.
+/// </summary>
+public class CoinbaseWebSocketOrderResponse
 {
+    /// <summary>
+    /// Unique identifier of order
+    /// </summary>
     [JsonProperty("order_id")]
     public string OrderId { get; set; }
 
+    /// <summary>
+    /// Unique identifier of order specified by client
+    /// </summary>
     [JsonProperty("client_order_id")]
     public string ClientOrderId { get; set; }
 
+    /// <summary>
+    /// Amount the order is filled, in base currency
+    /// </summary>
     [JsonProperty("cumulative_quantity")]
     public decimal? CumulativeQuantity { get; set; }
 
+    /// <summary>
+    /// Amount remaining, in same currency as order was placed in (quote or base)
+    /// </summary>
     [JsonProperty("leaves_quantity")]
     public decimal? LeavesQuantity { get; set; }
 
+    /// <summary>
+    /// Average filled price of the order so far
+    /// </summary>
     [JsonProperty("avg_price")]
     public decimal? AveragePrice { get; set; }
 
+    /// <summary>
+    /// Commission paid for the order
+    /// </summary>
     [JsonProperty("total_fees")]
     public decimal? TotalFees { get; set; }
 
+    /// <summary>
+    /// Order Status
+    /// </summary>
     [JsonProperty("status")]
-    public string Status { get; set; }
+    public OrderStatus Status { get; set; }
 
+    /// <summary>
+    /// The product ID for which this order was placed
+    /// </summary>
     [JsonProperty("product_id")]
     public string ProductId { get; set; }
 
+    /// <summary>
+    /// When the order was placed
+    /// </summary>
     [JsonProperty("creation_time")]
     public DateTimeOffset CreationTime { get; set; }
 
+    /// <summary>
+    /// Can be one of: BUY, SELL
+    /// </summary>
     [JsonProperty("order_side")]
     public OrderSide OrderSide { get; set; }
 
+    /// <summary>
+    /// Can be one of: Limit, Market, Stop Limit
+    /// </summary>
     [JsonProperty("order_type")]
     public string OrderType { get; set; }
 }
