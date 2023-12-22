@@ -14,9 +14,7 @@
 */
 
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 namespace QuantConnect.CoinbaseBrokerage.Models;
 
@@ -41,9 +39,8 @@ public readonly struct CoinbaseCancelOrder
     /// <summary>
     /// Failure Reason
     /// </summary>
-    [JsonConverter(typeof(StringEnumConverter))]
     [JsonProperty("failure_reason")]
-    public FailureCancelOrderReason FailureReason { get; }
+    public string FailureReason { get; }
 
     /// <summary>
     /// The IDs of order cancel request was initiated for
@@ -52,7 +49,7 @@ public readonly struct CoinbaseCancelOrder
     public string OrderId { get; }
 
     [JsonConstructor]
-    public CoinbaseCancelOrder(bool success, FailureCancelOrderReason failureReason, string orderId)
+    public CoinbaseCancelOrder(bool success, string failureReason, string orderId)
     {
         Success = success;
         FailureReason = failureReason;
