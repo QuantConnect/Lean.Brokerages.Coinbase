@@ -13,14 +13,33 @@
  * limitations under the License.
 */
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
+
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum OrderStatus
 {
-    UNKNOWN_ORDER_STATUS = 0,
-    OPEN = 1,
-    FILLED = 2,
-    CANCELLED = 3,
-    EXPIRED = 4,
-    FAILED = 5,
+    [EnumMember(Value = "UNKNOWN_ORDER_STATUS")]
+    UnknownOrderStatus,
+
+    [EnumMember(Value = "PENDING")]
+    Pending,
+
+    [EnumMember(Value = "OPEN")]
+    Open,
+
+    [EnumMember(Value = "FILLED")]
+    Filled,
+
+    [EnumMember(Value = "CANCELLED")]
+    Cancelled,
+
+    [EnumMember(Value = "EXPIRED")]
+    Expired,
+
+    [EnumMember(Value = "FAILED")]
+    Failed,
 }

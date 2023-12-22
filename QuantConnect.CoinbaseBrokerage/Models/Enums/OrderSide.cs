@@ -15,6 +15,7 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
@@ -25,18 +26,21 @@ namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 public enum OrderSide
 {
     /// <summary>
-    /// Indicates a unknown order siede.
+    /// Indicates a unknown order side.
     /// </summary>
-    UNKNOWN_ORDER_SIDE = 0,
+    [EnumMember(Value = "UNKNOWN_ORDER_SIDE")]
+    UnknownOrderSide = 0,
 
     /// <summary>
     /// Indicates a buy order.
     /// </summary>
-    BUY = 1,
+    [EnumMember(Value = "BUY")]
+    Buy = 1,
 
     /// <summary>
     /// Indicates a sell order.
     /// </summary>
-    SELL = 2,
+    [EnumMember(Value = "SELL")]
+    Sell = 2,
 }
 

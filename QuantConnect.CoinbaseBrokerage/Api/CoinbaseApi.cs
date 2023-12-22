@@ -98,9 +98,9 @@ public class CoinbaseApi : IDisposable
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/historical/batch", Method.GET);
 
-        if (orderStatus != BrokerageEnums.OrderStatus.UNKNOWN_ORDER_STATUS)
+        if (orderStatus != BrokerageEnums.OrderStatus.UnknownOrderStatus)
         {
-            request.AddQueryParameter("order_status", orderStatus.ToString());
+            request.AddQueryParameter("order_status", orderStatus.ToStringInvariant().ToUpperInvariant());
         }
 
         var response = _apiClient.ExecuteRequest(request);
@@ -161,7 +161,7 @@ public class CoinbaseApi : IDisposable
 
         request.AddQueryParameter("start", Time.DateTimeToUnixTimeStamp(start).ToString("F0", CultureInfo.InvariantCulture));
         request.AddQueryParameter("end", Time.DateTimeToUnixTimeStamp(end).ToString("F0", CultureInfo.InvariantCulture));
-        request.AddQueryParameter("granularity", granularity.ToStringInvariant());
+        request.AddQueryParameter("granularity", JsonConvert.SerializeObject(granularity).Replace("\"", string.Empty));
 
         var response = _apiClient.ExecuteRequest(request);
 
@@ -182,7 +182,7 @@ public class CoinbaseApi : IDisposable
         if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
         {
             var res = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
-            return new CoinbaseCreateOrderResponse(false, FailureCreateOrderReason.UNKNOWN_FAILURE_REASON, "", null, res, null);
+            return new CoinbaseCreateOrderResponse(false, FailureCreateOrderReason.UnknownFailureReason, "", null, res, null);
         }
 
         return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
@@ -195,7 +195,7 @@ public class CoinbaseApi : IDisposable
         var model = new CoinbaseCreateOrderRequest(
             Guid.NewGuid(),
             SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
-            leanOrder.Direction == OrderDirection.Buy ? OrderSide.BUY : OrderSide.SELL);
+            leanOrder.Direction == OrderDirection.Buy ? OrderSide.Buy : OrderSide.Sell);
 
         switch (leanOrder)
         {
@@ -259,8 +259,8 @@ public class CoinbaseApi : IDisposable
 
                 var ticker = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
                 stopLimitGtc.StopDirection = stopLimitGtc.StopPrice > ticker ?
-                    StopDirection.STOP_DIRECTION_STOP_UP :
-                    StopDirection.STOP_DIRECTION_STOP_DOWN;
+                    StopDirection.StopDirectionStopUp :
+                    StopDirection.StopDirectionStopDown;
 
                 model.OrderConfiguration = new() { StopLimitGtc = stopLimitGtc };
                 break;
@@ -275,8 +275,8 @@ public class CoinbaseApi : IDisposable
 
                 ticker = GetTickerPrice(leanOrder.Symbol, leanOrder.Direction);
                 stopLimitGtd.StopDirection = stopLimitGtd.StopPrice > ticker ?
-                    StopDirection.STOP_DIRECTION_STOP_UP :
-                    StopDirection.STOP_DIRECTION_STOP_DOWN;
+                    StopDirection.StopDirectionStopUp :
+                    StopDirection.StopDirectionStopDown;
 
                 model.OrderConfiguration = new() { StopLimitGtd = stopLimitGtd };
                 break;

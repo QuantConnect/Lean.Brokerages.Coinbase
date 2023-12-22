@@ -29,11 +29,11 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 return Orders.OrderStatus.PartiallyFilled;
             }
-            else if (order.Status == BrokerageEnums.OrderStatus.OPEN)
+            else if (order.Status == BrokerageEnums.OrderStatus.Open)
             {
                 return Orders.OrderStatus.Submitted;
             }
-            else if (order.Status == BrokerageEnums.OrderStatus.FILLED)
+            else if (order.Status == BrokerageEnums.OrderStatus.Filled)
             {
                 return Orders.OrderStatus.Filled;
             }

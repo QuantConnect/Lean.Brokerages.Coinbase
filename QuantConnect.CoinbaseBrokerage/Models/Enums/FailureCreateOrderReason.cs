@@ -13,27 +13,63 @@
  * limitations under the License.
 */
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
+
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 /// <summary>
 /// Failure Create Order Reason
 /// </summary>
+[JsonConverter(typeof(StringEnumConverter))]
 public enum FailureCreateOrderReason
 {
-    UNKNOWN_FAILURE_REASON = 0,
-    UNSUPPORTED_ORDER_CONFIGURATION = 1,
-    INVALID_SIDE = 2,
-    INVALID_PRODUCT_ID = 3,
-    INVALID_SIZE_PRECISION = 4,
-    INVALID_PRICE_PRECISION = 5,
-    INSUFFICIENT_FUND = 6,
-    INVALID_LEDGER_BALANCE = 7,
-    ORDER_ENTRY_DISABLED = 8,
-    INELIGIBLE_PAIR = 9,
-    INVALID_LIMIT_PRICE_POST_ONLY = 10,
-    INVALID_LIMIT_PRICE = 11,
-    INVALID_NO_LIQUIDITY = 12,
-    INVALID_REQUEST = 13,
-    COMMANDER_REJECTED_NEW_ORDER = 14,
-    INSUFFICIENT_FUNDS = 15
+    [EnumMember(Value = "UNKNOWN_FAILURE_REASON")]
+    UnknownFailureReason = 0,
+
+    [EnumMember(Value = "UNSUPPORTED_ORDER_CONFIGURATION")]
+    UnsupportedOrderConfiguration = 1,
+
+    [EnumMember(Value = "INVALID_SIDE")]
+    InvalidSide = 2,
+
+    [EnumMember(Value = "INVALID_PRODUCT_ID")]
+    InvalidProductId = 3,
+
+    [EnumMember(Value = "INVALID_SIZE_PRECISION")]
+    InvalidSizePrecision = 4,
+
+    [EnumMember(Value = "INVALID_PRICE_PRECISION")]
+    InvalidPricePrecision = 5,
+
+    [EnumMember(Value = "INSUFFICIENT_FUND")]
+    InsufficientFund = 6,
+
+    [EnumMember(Value = "INVALID_LEDGER_BALANCE")]
+    InvalidLedgerBalance = 7,
+
+    [EnumMember(Value = "ORDER_ENTRY_DISABLED")]
+    OrderEntryDisabled = 8,
+
+    [EnumMember(Value = "INELIGIBLE_PAIR")]
+    IneligiblePair = 9,
+
+    [EnumMember(Value = "INVALID_LIMIT_PRICE_POST_ONLY")]
+    InvalidLimitPricePostOnly = 10,
+
+    [EnumMember(Value = "INVALID_LIMIT_PRICE")]
+    InvalidLimitPrice = 11,
+
+    [EnumMember(Value = "INVALID_NO_LIQUIDITY")]
+    InvalidNoLiquidity = 12,
+
+    [EnumMember(Value = "INVALID_REQUEST")]
+    InvalidRequest = 13,
+
+    [EnumMember(Value = "COMMANDER_REJECTED_NEW_ORDER")]
+    CommanderRejectedNewOrder = 14,
+
+    [EnumMember(Value = "INSUFFICIENT_FUNDS")]
+    InsufficientFunds = 15
 }

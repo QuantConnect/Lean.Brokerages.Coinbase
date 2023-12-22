@@ -15,6 +15,7 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
@@ -22,6 +23,9 @@ namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 [JsonConverter(typeof(StringEnumConverter))]
 public enum StopDirection
 {
-    STOP_DIRECTION_STOP_UP = 0,
-    STOP_DIRECTION_STOP_DOWN = 1,
+    [EnumMember(Value = "STOP_DIRECTION_STOP_UP")]
+    StopDirectionStopUp = 0,
+
+    [EnumMember(Value = "STOP_DIRECTION_STOP_DOWN")]
+    StopDirectionStopDown = 1,
 }

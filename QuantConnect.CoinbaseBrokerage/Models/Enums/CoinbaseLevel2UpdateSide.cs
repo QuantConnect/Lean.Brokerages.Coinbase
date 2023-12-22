@@ -15,6 +15,7 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
@@ -24,10 +25,12 @@ public enum CoinbaseLevel2UpdateSide
     /// <summary>
     /// Bid
     /// </summary>
-    bid = 0,
+    [EnumMember(Value = "bid")]
+    Bid = 0,
 
     /// <summary>
     /// Ask
     /// </summary>
-    offer = 1,
+    [EnumMember(Value = "offer")]
+    Offer = 1,
 }

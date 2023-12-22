@@ -13,38 +13,48 @@
  * limitations under the License.
 */
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
+
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 /// <summary>
 /// Time in force policies provide guarantees about the lifetime of an order.
 /// </summary>
+[JsonConverter(typeof(StringEnumConverter))]
 public enum TimeInForce
 {
     /// <summary>
     /// Unknown time in force orders
     /// </summary>
-    UNKNOWN_TIME_IN_FORCE = 0,
+    [EnumMember(Value = "UNKNOWN_TIME_IN_FORCE")]
+    UnknownTimeInForce = 0,
 
     /// <summary>
     /// Good until date orders are valid till a specified date or time (within a 90-day hard limit) unless 
     /// it has been already fulfilled or cancelled.
     /// </summary>
-    GOOD_UNTIL_DATE_TIME = 1,
+    [EnumMember(Value = "GOOD_UNTIL_DATE_TIME")]
+    GoodUntilDateTime = 1,
 
     /// <summary>
     /// Good until canceled orders remain open on the book until canceled. 
     /// This is the default behavior if no policy is specified.
     /// </summary>
-    GOOD_UNTIL_CANCELLED = 2,
+    [EnumMember(Value = "GOOD_UNTIL_CANCELLED")]
+    GoodUntilCancelled = 2,
 
     /// <summary>
     /// Immediate or cancel orders instantly cancel the remaining size of 
     /// the limit order instead of opening it on the book.
     /// </summary>
-    IMMEDIATE_OR_CANCEL = 3,
+    [EnumMember(Value = "IMMEDIATE_OR_CANCEL")]
+    ImmediateOrCancel = 3,
 
     /// <summary>
     /// Fill or kill orders are rejected if the entire size cannot be matched.
     /// </summary>
-    FILL_OR_KILL = 4,
+    [EnumMember(Value = "FILL_OR_KILL")]
+    FillOrKill = 4,
 }

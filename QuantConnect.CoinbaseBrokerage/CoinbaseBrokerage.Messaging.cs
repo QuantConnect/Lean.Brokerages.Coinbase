@@ -88,7 +88,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     case CoinbaseWebSocketChannels.MarketTrades:
                         var message = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseMarketTradesEvent>>();
-                        if (message.Events[0].Type == WebSocketEventType.update)
+                        if (message.Events[0].Type == WebSocketEventType.Update)
                         {
                             EmitTradeTick(message.Events[0]);
                         }
@@ -100,10 +100,10 @@ namespace QuantConnect.CoinbaseBrokerage
                         var level2Data = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseLevel2Event>>();
                         switch (level2Data.Events[0].Type)
                         {
-                            case WebSocketEventType.snapshot:
+                            case WebSocketEventType.Snapshot:
                                 Level2Snapshot(level2Data.Events[0]);
                                 break;
-                            case WebSocketEventType.update:
+                            case WebSocketEventType.Update:
                                 Level2Update(level2Data.Events[0]);
                                 break;
                             default:
@@ -136,13 +136,13 @@ namespace QuantConnect.CoinbaseBrokerage
 
             foreach (var update in snapshotData.Updates)
             {
-                if (update.Side == CoinbaseLevel2UpdateSide.bid)
+                if (update.Side == CoinbaseLevel2UpdateSide.Bid)
                 {
                     orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
                     continue;
                 }
 
-                if (update.Side == CoinbaseLevel2UpdateSide.offer)
+                if (update.Side == CoinbaseLevel2UpdateSide.Offer)
                 {
                     orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
                 }
@@ -172,7 +172,7 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 switch (update.Side)
                 {
-                    case CoinbaseLevel2UpdateSide.bid:
+                    case CoinbaseLevel2UpdateSide.Bid:
                         if (update.NewQuantity.Value == 0)
                         {
                             orderBook.RemoveBidRow(update.PriceLevel.Value);
@@ -182,7 +182,7 @@ namespace QuantConnect.CoinbaseBrokerage
                             orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
                         }
                         continue;
-                    case CoinbaseLevel2UpdateSide.offer:
+                    case CoinbaseLevel2UpdateSide.Offer:
                         if (update.NewQuantity.Value == 0)
                         {
                             orderBook.RemoveAskRow(update.PriceLevel.Value);

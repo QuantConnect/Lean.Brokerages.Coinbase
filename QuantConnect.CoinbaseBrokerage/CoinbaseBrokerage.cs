@@ -160,7 +160,7 @@ namespace QuantConnect.CoinbaseBrokerage
             if (!response.Success)
             {
                 var errorMessage =
-                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UNKNOWN_FAILURE_REASON
+                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UnknownFailureReason
                     ? response.ErrorResponse.Value.PreviewFailureReason : response.ErrorResponse.Value.Error.ToString();
                 OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
                 { Status = OrderStatus.Invalid, Message = errorMessage });
@@ -253,7 +253,7 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var list = new List<Order>();
 
-            var openOrders = _coinbaseApi.GetListOrders(BrokerageEnums.OrderStatus.OPEN);
+            var openOrders = _coinbaseApi.GetListOrders(BrokerageEnums.OrderStatus.Open);
 
             foreach (var order in openOrders)
             {
@@ -263,34 +263,34 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 if (order.OrderConfiguration.MarketIoc != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ?
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ?
                         order.OrderConfiguration.MarketIoc.QuoteSize : Decimal.Negate(order.OrderConfiguration.MarketIoc.BaseSize);
                     leanOrder = new MarketOrder(symbol, quantity, order.CreatedTime, order.AverageFilledPrice);
                 }
                 else if (order.OrderConfiguration.LimitGtc != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ? order.OrderConfiguration.LimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtc.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.LimitGtd != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ? order.OrderConfiguration.LimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitGtd.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.LimitGtd.EndTime);
                 }
                 else if (order.OrderConfiguration.LimitIoc != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.LimitIoc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitIoc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ? order.OrderConfiguration.LimitIoc.BaseSize : Decimal.Negate(order.OrderConfiguration.LimitIoc.BaseSize);
                     leanOrder = new LimitOrder(symbol, quantity, order.OrderConfiguration.LimitIoc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.StopLimitGtc != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ? order.OrderConfiguration.StopLimitGtc.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtc.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtc.StopPrice, order.OrderConfiguration.StopLimitGtc.LimitPrice, order.CreatedTime);
                 }
                 else if (order.OrderConfiguration.StopLimitGtd != null)
                 {
-                    var quantity = order.Side == BrokerageEnums.OrderSide.BUY ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
+                    var quantity = order.Side == BrokerageEnums.OrderSide.Buy ? order.OrderConfiguration.StopLimitGtd.BaseSize : Decimal.Negate(order.OrderConfiguration.StopLimitGtd.BaseSize);
                     leanOrder = new StopLimitOrder(symbol, quantity, order.OrderConfiguration.StopLimitGtd.StopPrice, order.OrderConfiguration.StopLimitGtd.LimitPrice, order.CreatedTime);
                     leanOrder.Properties.TimeInForce = ConvertTimeInForce(order.TimeInForce, order.OrderConfiguration.StopLimitGtd.EndTime);
                 }
@@ -381,9 +381,9 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             switch (timeInForce)
             {
-                case BrokerageEnums.TimeInForce.GOOD_UNTIL_DATE_TIME:
+                case BrokerageEnums.TimeInForce.GoodUntilDateTime:
                     return TimeInForce.GoodTilDate(expiryDate);
-                case BrokerageEnums.TimeInForce.GOOD_UNTIL_CANCELLED:
+                case BrokerageEnums.TimeInForce.GoodUntilCancelled:
                 default:
                     return TimeInForce.GoodTilCanceled;
             }

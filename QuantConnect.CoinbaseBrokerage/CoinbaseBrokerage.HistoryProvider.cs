@@ -102,9 +102,9 @@ namespace QuantConnect.CoinbaseBrokerage
 
             var granularity = request.Resolution switch
             {
-                Resolution.Minute => CandleGranularity.ONE_MINUTE,
-                Resolution.Hour => CandleGranularity.ONE_HOUR,
-                Resolution.Daily => CandleGranularity.ONE_DAY,
+                Resolution.Minute => CandleGranularity.OneMinute,
+                Resolution.Hour => CandleGranularity.OneHour,
+                Resolution.Daily => CandleGranularity.OneDay,
                 _ => throw new NotSupportedException($"The resolution {request.Resolution} is not supported.")
             };
 

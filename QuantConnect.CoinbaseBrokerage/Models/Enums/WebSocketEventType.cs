@@ -15,13 +15,19 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
 
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum WebSocketEventType
 {
-    none = 0,
-    snapshot = 1,
-    update = 2,
+    [EnumMember(Value = "none")]
+    None = 0,
+
+    [EnumMember(Value = "snapshot")]
+    Snapshot = 1,
+
+    [EnumMember(Value = "update")]
+    Update = 2,
 }

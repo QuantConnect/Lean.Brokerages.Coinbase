@@ -13,30 +13,39 @@
  * limitations under the License.
 */
 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System.Runtime.Serialization;
+
 namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
 
 /// <summary>
 /// Represents the granularity of candlestick data for financial charting.
 /// </summary>
+[JsonConverter(typeof(StringEnumConverter))]
 public enum CandleGranularity
 {
     /// <summary>
     /// Unknown granularity.
     /// </summary>
-    UNKNOWN_GRANULARITY = 0,
+    [EnumMember(Value = "UNKNOWN_GRANULARITY")]
+    UnknownGranularity = 0,
 
     /// <summary>
     /// Granularity representing one-minute intervals.
     /// </summary>
-    ONE_MINUTE = 1,
+    [EnumMember(Value = "ONE_MINUTE")]
+    OneMinute = 1,
 
     /// <summary>
     /// Granularity representing one-hour intervals.
     /// </summary>
-    ONE_HOUR = 2,
+    [EnumMember(Value = "ONE_HOUR")]
+    OneHour = 2,
 
     /// <summary>
     /// Granularity representing one-day intervals.
     /// </summary>
-    ONE_DAY = 3,
+    [EnumMember(Value = "ONE_DAY")]
+    OneDay = 3,
 }
