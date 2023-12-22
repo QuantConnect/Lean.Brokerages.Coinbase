@@ -15,6 +15,7 @@
 
 using System;
 using RestSharp;
+using System.Net;
 using System.Text;
 using System.Linq;
 using QuantConnect.Util;
@@ -84,7 +85,14 @@ public class CoinbaseApiClient : IDisposable
 
         AuthenticateRequest(request);
 
-        return _restClient.Execute(request);
+        var response = _restClient.Execute(request);
+
+        if (response.StatusCode != HttpStatusCode.OK)
+        {
+            throw new Exception($"{nameof(CoinbaseApiClient)}.{nameof(ExecuteRequest)} failed: [{(int)response.StatusCode}] {response.StatusDescription}, Content: {response.Content}, ErrorMessage: {response.ErrorMessage}");
+        }
+
+        return response;
     }
 
     /// <summary>
