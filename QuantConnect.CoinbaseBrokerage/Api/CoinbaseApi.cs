@@ -108,7 +108,7 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseOrderResponse>(response.Content).Orders;
     }
 
-    public CoinbaseCancelOrder CancelOrders(List<string> brokerIds)
+    public CoinbaseCancelOrderResult CancelOrders(List<string> brokerIds)
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/batch_cancel", Method.POST);
 
@@ -116,7 +116,7 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
-        return JsonConvert.DeserializeObject<CoinbaseCancelOrders>(response.Content).Result.First();
+        return JsonConvert.DeserializeObject<CoinbaseCancelOrdersResponse>(response.Content).Result.First();
     }
 
     /// <summary>
@@ -171,7 +171,7 @@ public class CoinbaseApi : IDisposable
 
     public CoinbaseCreateOrderResponse CreateOrder(Order leanOrder)
     {
-        var placeOrderRequest = CreateRequest(leanOrder);
+        var placeOrderRequest = CreateOrderRequest(leanOrder);
 
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders", Method.POST);
 
@@ -179,18 +179,15 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
-        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
-        {
-            var res = JsonConvert.DeserializeObject<ErrorResponse>(response.Content);
-            return new CoinbaseCreateOrderResponse(false, FailureCreateOrderReason.UnknownFailureReason, "", null, res, null);
-        }
-
         return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
     }
 
-    private CoinbaseCreateOrderRequest CreateRequest(Order leanOrder)
+    private CoinbaseCreateOrderRequest CreateOrderRequest(Order leanOrder)
     {
-        if (leanOrder.Direction == OrderDirection.Hold) throw new NotSupportedException();
+        if (leanOrder.Direction == OrderDirection.Hold)
+        {
+            throw new NotSupportedException();
+        }
 
         var model = new CoinbaseCreateOrderRequest(
             Guid.NewGuid(),

@@ -370,9 +370,8 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         public override void Dispose()
         {
-            _aggregator.DisposeSafely();
-
             _webSocketRateLimit.DisposeSafely();
+            SubscriptionManager.DisposeSafely();
         }
 
         #region Utils

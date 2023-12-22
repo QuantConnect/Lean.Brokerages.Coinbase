@@ -18,17 +18,17 @@ using System.Collections.Generic;
 
 namespace QuantConnect.CoinbaseBrokerage.Models;
 
-public readonly struct CoinbaseCancelOrders
+public readonly struct CoinbaseCancelOrdersResponse
 {
     [JsonProperty("results")]
-    public IEnumerable<CoinbaseCancelOrder> Result { get; }
+    public IEnumerable<CoinbaseCancelOrderResult> Result { get; }
 
     [JsonConstructor]
-    public CoinbaseCancelOrders(IEnumerable<CoinbaseCancelOrder> result) => Result = result;
+    public CoinbaseCancelOrdersResponse(IEnumerable<CoinbaseCancelOrderResult> result) => Result = result;
 }
 
 
-public readonly struct CoinbaseCancelOrder
+public readonly struct CoinbaseCancelOrderResult
 {
     /// <summary>
     /// Whether the cancel request was submitted successfully.
@@ -49,7 +49,7 @@ public readonly struct CoinbaseCancelOrder
     public string OrderId { get; }
 
     [JsonConstructor]
-    public CoinbaseCancelOrder(bool success, string failureReason, string orderId)
+    public CoinbaseCancelOrderResult(bool success, string failureReason, string orderId)
     {
         Success = success;
         FailureReason = failureReason;
