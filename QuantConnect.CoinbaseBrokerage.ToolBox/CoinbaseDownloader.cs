@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using System;
 using NodaTime;
 using System.Linq;
 using QuantConnect.Data;
@@ -47,10 +48,24 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                 return Enumerable.Empty<BaseData>();
             }
 
+            var type = default(Type);
+            if(resolution == Resolution.Tick)
+            {
+                type = typeof(Tick);
+            }
+            else if(tickType == TickType.Trade)
+            {
+                type = typeof(TradeBar);
+            }
+            else
+            {
+                type = typeof(OpenInterest);
+            }
+
             var historyRequest = new HistoryRequest(
                 startUtc,
                 endUtc,
-                resolution == Resolution.Tick ? typeof(Tick) : tickType == TickType.Trade ? typeof(TradeBar) : typeof(OpenInterest),
+                type,
                 symbol,
                 resolution,
                 SecurityExchangeHours.AlwaysOpen(DateTimeZone.Utc),

@@ -76,6 +76,24 @@ public class CoinbaseApi : IDisposable
         _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
     }
 
+    /// <summary>
+    /// Generates WebSocket signatures for authentication.
+    /// </summary>
+    /// <param name="channel">The WebSocket channel for which the signature is generated.</param>
+    /// <param name="productIds">A collection of product identifiers for which the signature is generated.</param>
+    /// <returns>
+    /// A tuple containing the API key, timestamp, and signature required for WebSocket authentication.
+    /// </returns>
+    /// <remarks>
+    /// The <paramref name="channel"/> <see cref="Models.Constants.CoinbaseWebSocketChannels"/> parameter specifies the WebSocket channel, 
+    /// and <paramref name="productIds"/> contains a collection of product identifiers for which the authentication signature is generated.
+    /// </remarks>
+    /// <example>
+    /// This example demonstrates how to use the GetWebSocketSignatures method:
+    /// <code>
+    /// var (apiKey, timestamp, signature) = GetWebSocketSignatures("trades", new List<string> { "BTC-USD", "ETH-USD" });
+    /// </code>
+    /// </example>
     public (string apiKey, string timestamp, string signature) GetWebSocketSignatures(string channel, ICollection<string> productIds)
     {
         return _apiClient.GenerateWebSocketSignature(channel, productIds);
@@ -85,7 +103,7 @@ public class CoinbaseApi : IDisposable
     /// Retrieves a list of Coinbase accounts associated with the authenticated user's brokerage.
     /// </summary>
     /// <returns>An IEnumerable of CoinbaseAccount objects representing the user's brokerage accounts.</returns>
-    public IEnumerable<CoinbaseAccount> GetListAccounts()
+    public IEnumerable<CoinbaseAccount> GetAccounts()
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/accounts", Method.GET);
 
@@ -94,7 +112,20 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseAccountResponse>(response.Content).Accounts;
     }
 
-    public IEnumerable<CoinbaseOrder> GetListOrders(BrokerageEnums.OrderStatus orderStatus)
+    /// <summary>
+    /// Retrieves a collection of historical Coinbase orders based on the specified order status.
+    /// </summary>
+    /// <param name="orderStatus">The status of the orders to retrieve.</param>
+    /// <returns>
+    /// An IEnumerable of CoinbaseOrder representing historical orders matching the specified order status.
+    /// </returns>
+    /// <remarks>
+    /// The method constructs a request to the Coinbase API for retrieving historical orders.
+    /// The optional <paramref name="orderStatus"/> parameter allows filtering orders based on their status.
+    /// If the <paramref name="orderStatus"/> is set to <see cref="BrokerageEnums.OrderStatus.UnknownOrderStatus"/>,
+    /// all historical orders, regardless of their status, will be retrieved.
+    /// </remarks>
+    public IEnumerable<CoinbaseOrder> GetOrders(BrokerageEnums.OrderStatus orderStatus)
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/historical/batch", Method.GET);
 
@@ -108,6 +139,18 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseOrderResponse>(response.Content).Orders;
     }
 
+    /// <summary>
+    /// Cancels multiple Coinbase orders identified by their broker IDs.
+    /// </summary>
+    /// <param name="brokerIds">A list of broker IDs representing the orders to be canceled.</param>
+    /// <returns>
+    /// A CoinbaseCancelOrderResult representing the result of the cancellation operation.
+    /// </returns>
+    /// <remarks>
+    /// The method constructs a request to the Coinbase API for canceling multiple orders in batch.
+    /// The <paramref name="brokerIds"/> parameter contains a list of broker IDs that uniquely identify
+    /// the orders to be canceled. The method returns a result representing the outcome of the cancellation operation.
+    /// </remarks>
     public CoinbaseCancelOrderResult CancelOrders(List<string> brokerIds)
     {
         var request = new RestRequest($"{_apiPrefix}/brokerage/orders/batch_cancel", Method.POST);
@@ -116,6 +159,8 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
+        // It always returns result, even if we have sent invalid orderId
+        // The Coinbase doesn't support combo orders as a result we return First cancel order response
         return JsonConvert.DeserializeObject<CoinbaseCancelOrdersResponse>(response.Content).Result.First();
     }
 
@@ -169,6 +214,18 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseProductCandles>(response.Content).Candles.Reverse();
     }
 
+    /// <summary>
+    /// Creates a new Coinbase order based on the specified Lean order.
+    /// </summary>
+    /// <param name="leanOrder">The Lean order object containing the order details.</param>
+    /// <returns>
+    /// A CoinbaseCreateOrderResponse representing the response from Coinbase after placing the order.
+    /// </returns>
+    /// <remarks>
+    /// The method takes a Lean order object and converts it into the required format for placing an order
+    /// using the Coinbase API. It then constructs a request to the Coinbase API for creating a new order,
+    /// sends the request, and returns the response containing information about the created order.
+    /// </remarks>
     public CoinbaseCreateOrderResponse CreateOrder(Order leanOrder)
     {
         var placeOrderRequest = CreateOrderRequest(leanOrder);
@@ -182,6 +239,13 @@ public class CoinbaseApi : IDisposable
         return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
     }
 
+    /// <summary>
+    /// Creates a Coinbase order request based on the specified Lean order.
+    /// </summary>
+    /// <param name="leanOrder">The Lean order object containing the order details.</param>
+    /// <returns>
+    /// A CoinbaseCreateOrderRequest representing the request to be sent to Coinbase for order placement.
+    /// </returns>
     private CoinbaseCreateOrderRequest CreateOrderRequest(Order leanOrder)
     {
         if (leanOrder.Direction == OrderDirection.Hold)
@@ -289,6 +353,23 @@ public class CoinbaseApi : IDisposable
         return model;
     }
 
+    /// <summary>
+    /// Retrieves the ticker price for the specified symbol and order direction.
+    /// </summary>
+    /// <param name="symbol">The symbol for which to retrieve the ticker price.</param>
+    /// <param name="leanOrderDirection">The order direction (Buy or Sell) for which to retrieve the ticker price.</param>
+    /// <returns>
+    /// The ticker price associated with the specified symbol and order direction.
+    /// </returns>
+    /// <remarks>
+    /// The method first attempts to retrieve the ticker price from the provided security object.
+    /// If the ticker price is not available or is zero, it queries the market trades for the specified symbol
+    /// and retrieves the BestBid or BestAsk depending on the order direction.
+    /// If the market trades data is also unavailable, the method throws a KeyNotFoundException.
+    /// </remarks>
+    /// <exception cref="KeyNotFoundException">
+    /// Thrown when the ticker price cannot be resolved due to missing market trades data.
+    /// </exception>
     private decimal GetTickerPrice(Symbol symbol, OrderDirection leanOrderDirection)
     {
         var security = SecurityProvider.GetSecurity(symbol);

@@ -14,16 +14,16 @@
 */
 
 using System;
+using RestSharp;
 using System.Linq;
 using NUnit.Framework;
+using Newtonsoft.Json.Linq;
 using QuantConnect.Brokerages;
 using QuantConnect.Configuration;
+using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Api;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
 using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
-using Newtonsoft.Json.Linq;
-using QLNet;
-using QuantConnect.Api;
 
 namespace QuantConnect.CoinbaseBrokerage.Tests
 {
@@ -49,13 +49,13 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             var coinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
 
             // call random endpoint with incorrect credential
-            Assert.Throws<Exception>(() => coinbaseApi.GetListAccounts());
+            Assert.Throws<Exception>(() => coinbaseApi.GetAccounts());
         }
 
         [Test] 
         public void GetListAccounts() 
         {
-            var accounts = CoinbaseApi.GetListAccounts();
+            var accounts = CoinbaseApi.GetAccounts();
 
             Assert.Greater(accounts.Count(), 0);
 
@@ -78,11 +78,11 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 // Not supported order status request
                 if(OrderStatus.Pending == orderStatus)
                 {
-                    Assert.Throws<Exception>(() => CoinbaseApi.GetListOrders(orderStatus));
+                    Assert.Throws<Exception>(() => CoinbaseApi.GetOrders(orderStatus));
                     continue;
                 }
 
-                var orders = CoinbaseApi.GetListOrders(orderStatus);
+                var orders = CoinbaseApi.GetOrders(orderStatus);
                 Assert.IsNotNull(orders);
             }
         }
@@ -167,6 +167,41 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 Assert.GreaterOrEqual(tick.PriceLevel, 0);
                 Assert.IsInstanceOf<CoinbaseLevel2UpdateSide>(tick.Side);
             }            
+        }
+
+        [TestCase("/api/v3/brokerage/orders", null, "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", "", "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", "{null}", "Bad Request")]
+        [TestCase("/api/v3/brokerage/orders", "[]", "Unauthorized")]
+        public void ValidateCoinbaseRestRequestWithWrongBodyParameter(string uriPath, object bodyData, string message)
+        {
+            var apiKey = Config.Get("coinbase-api-key");
+            var apiKeySecret = Config.Get("coinbase-api-secret");
+            var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
+
+            var request = new RestRequest($"{uriPath}", Method.POST);
+
+            var _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, 30);
+
+            request.AddJsonBody(bodyData);
+
+            var exception = Assert.Throws<Exception>(() => _apiClient.ExecuteRequest(request));
+            Assert.IsTrue(exception.Message.Contains(message));
+        }
+
+        [TestCase("", "INVALID_CANCEL_REQUEST")]
+        [TestCase("44703527-de90-4aac-ae52-8e6910dee426", "UNKNOWN_CANCEL_ORDER")]
+        public void CancelOrderWithWrongOrderId(string orderId, string errorMessage)
+        {
+            var fakeBrokerIds = new List<string>()
+            {
+                orderId
+            };
+
+            var response = CoinbaseApi.CancelOrders(fakeBrokerIds);
+
+            Assert.IsFalse(response.Success);
+            Assert.AreEqual(errorMessage, response.FailureReason);
         }
 
         private CoinbaseApi CreateCoinbaseApi(string apiKey, string apiKeySecret)

@@ -280,7 +280,7 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var list = new List<Order>();
 
-            var openOrders = _coinbaseApi.GetListOrders(BrokerageEnums.OrderStatus.Open);
+            var openOrders = _coinbaseApi.GetOrders(BrokerageEnums.OrderStatus.Open);
 
             foreach (var order in openOrders)
             {
@@ -365,7 +365,7 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var list = new List<CashAmount>();
 
-            var accounts = _coinbaseApi.GetListAccounts();
+            var accounts = _coinbaseApi.GetAccounts();
 
             foreach (var item in accounts)
             {

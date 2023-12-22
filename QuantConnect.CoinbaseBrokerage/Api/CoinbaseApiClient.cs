@@ -60,7 +60,7 @@ public class CoinbaseApiClient : IDisposable
 
         var timestamp = GetNonce();
 
-        var signature = GetSign(timestamp, request.Method.ToString(), urlPath, body?.Value.ToString() ?? string.Empty);
+        var signature = GetSign(timestamp, request.Method.ToString(), urlPath, body?.Value?.ToString() ?? string.Empty);
 
         request.AddHeader("CB-ACCESS-KEY", _apiKey);
         request.AddHeader("CB-ACCESS-SIGN", signature);
@@ -108,7 +108,7 @@ public class CoinbaseApiClient : IDisposable
     /// <remarks>
     /// The signature is computed using the HMAC-SHA256 algorithm and is typically used for authentication and message integrity.
     /// </remarks>
-    public string GetSign(string timeStamp, string httpMethod, string urlPath, string body)
+    private string GetSign(string timeStamp, string httpMethod, string urlPath, string body)
     {
         var preHash = timeStamp + httpMethod + urlPath + body;
 
