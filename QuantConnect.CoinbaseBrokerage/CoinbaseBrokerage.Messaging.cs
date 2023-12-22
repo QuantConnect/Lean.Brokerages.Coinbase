@@ -93,7 +93,7 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
 
-            Log.Debug($"{nameof(CoinbaseBrokerage)}:{nameof(OnMessage)}: {data.Message}");
+            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
 
             try
             {
@@ -347,7 +347,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 }
                 else if (item.SecurityType == SecurityType.Crypto)
                 {
-                    Log.Error($"{nameof(CoinbaseBrokerage)}:{nameof(Subscribe)}: Unknown symbol: {item.Value}");
+                    Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Unknown symbol: {item.Value}");
                 }
             }
 
@@ -393,12 +393,12 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             if (string.IsNullOrWhiteSpace(channel))
             {
-                throw new ArgumentException($"{nameof(CoinbaseBrokerage)}:SubscribeToChannel: ChannelRequired:", nameof(channel));
+                throw new ArgumentException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: ChannelRequired:", nameof(channel));
             }
 
             if (!IsConnected)
             {
-                throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}:SubscribeToChannel: WebSocketMustBeConnected");
+                throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
 
             var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);

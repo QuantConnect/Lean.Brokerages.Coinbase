@@ -175,12 +175,12 @@ public class CoinbaseApi : IDisposable
     {
         if (string.IsNullOrEmpty(productId))
         {
-            throw new ArgumentException("CoinbaseApi:GetMarketTrades(): productId is null or empty");
+            throw new ArgumentException($"{nameof(CoinbaseApi)}.{nameof(GetMarketTrades)}: productId is null or empty");
         }
 
         if (limit > 1000)
         {
-            throw new ArgumentException("CoinbaseApi:GetMarketTrades(): Please provide a limit equal to or below 1000.");
+            throw new ArgumentException($"{nameof(CoinbaseApi)}.{nameof(GetMarketTrades)}: Please provide a limit equal to or below 1000.");
         }
 
         var request = new RestRequest($"{_apiPrefix}/brokerage/products/{productId}/ticker", Method.GET);

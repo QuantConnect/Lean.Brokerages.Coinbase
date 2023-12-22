@@ -46,7 +46,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 if (!_loggedCoinbaseSupportsOnlyTradeBars)
                 {
                     _loggedCoinbaseSupportsOnlyTradeBars = true;
-                    _algorithm?.Debug($"Warning:{nameof(CoinbaseBrokerage)}: history provider only supports trade information, does not support quotes.");
+                    _algorithm?.Debug($"Warning.{nameof(CoinbaseBrokerage)}: history provider only supports trade information, does not support quotes.");
                     Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}(): only supports TradeBars");
                 }
                 yield break;
