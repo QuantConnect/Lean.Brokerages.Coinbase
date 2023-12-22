@@ -200,6 +200,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <returns></returns>
         public override bool UpdateOrder(Order order)
         {
+            // Is temporarily unavailable, Status: https://status.coinbase.com/incidents/7y4cpt0r2dcd
             throw new NotSupportedException($"{nameof(CoinbaseBrokerage)}:{nameof(UpdateOrder)}: Order update not supported. Please cancel and re-create.");
         }
 
