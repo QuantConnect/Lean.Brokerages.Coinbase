@@ -135,7 +135,6 @@ namespace QuantConnect.CoinbaseBrokerage
                         }
                         break;
                     case CoinbaseWebSocketChannels.User:
-                        var message2 = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
                         var orderUpdate = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
                         if (orderUpdate.Events[0].Type == WebSocketEventType.Snapshot)
                         {
