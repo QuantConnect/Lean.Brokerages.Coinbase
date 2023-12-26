@@ -258,6 +258,13 @@ public class CoinbaseApi : IDisposable
             SymbolMapper.GetBrokerageSymbol(leanOrder.Symbol),
             leanOrder.Direction == OrderDirection.Buy ? OrderSide.Buy : OrderSide.Sell);
 
+        var orderProperties = leanOrder.Properties as CoinbaseOrderProperties;
+
+        if (orderProperties == null)
+        {
+            throw new ArgumentException($"Order properties should be of {nameof(CoinbaseOrderProperties)} type.");
+        }
+
         switch (leanOrder)
         {
             case MarketOrder:
@@ -284,11 +291,7 @@ public class CoinbaseApi : IDisposable
                         }
                     };
 
-                    if (leanOrder.Properties is GDAXOrderProperties prop)
-                    {
-                        model.OrderConfiguration.LimitGtc.PostOnly = prop.PostOnly;
-                    }
-
+                    model.OrderConfiguration.LimitGtc.PostOnly = orderProperties.PostOnly;
                     break;
                 }
             case LimitOrder limitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilDateTimeInForce tilDate:
@@ -303,11 +306,7 @@ public class CoinbaseApi : IDisposable
                         }
                     };
 
-                    if (leanOrder.Properties is GDAXOrderProperties prop)
-                    {
-                        model.OrderConfiguration.LimitGtd.PostOnly = prop.PostOnly;
-                    }
-
+                    model.OrderConfiguration.LimitGtc.PostOnly = orderProperties.PostOnly;
                     break;
                 }
             case StopLimitOrder stopLimitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilCanceledTimeInForce:
@@ -344,8 +343,7 @@ public class CoinbaseApi : IDisposable
             default: throw new NotSupportedException($"Order type {leanOrder.Type.ToStringInvariant()} is not supported");
         };
 
-        // TODO: Add CoinbaseOrderProperties
-        if (false)
+        if (orderProperties.SelfTradePreventionId)
         {
             model.SelfTradePreventionId = Guid.NewGuid();
         }
