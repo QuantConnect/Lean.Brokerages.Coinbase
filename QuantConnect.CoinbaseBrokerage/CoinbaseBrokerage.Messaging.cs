@@ -188,8 +188,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     continue;
                 }
-
-
         }
         }
 
@@ -363,7 +361,6 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 AskPrice = askPrice,
                 BidPrice = bidPrice,
-                Value = (askPrice + bidPrice) / 2m,
                 Time = DateTime.UtcNow,
                 Symbol = symbol,
                 TickType = TickType.Quote,

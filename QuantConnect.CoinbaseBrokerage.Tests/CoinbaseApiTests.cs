@@ -70,48 +70,45 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             }
         }
 
-        [Test]
-        public void GetListOrdersWithDifferentOrderStatus()
+        [TestCase(OrderStatus.UnknownOrderStatus)]
+        [TestCase(OrderStatus.Open)]
+        [TestCase(OrderStatus.Filled)]
+        [TestCase(OrderStatus.Cancelled)]
+        [TestCase(OrderStatus.Expired)]
+        [TestCase(OrderStatus.Failed)]
+        public void GetListOrdersWithDifferentOrderStatus(OrderStatus orderStatus)
         {
-            foreach (var orderStatus in (OrderStatus[])Enum.GetValues(typeof(OrderStatus)))
-            {
-                // Not supported order status request
-                if(OrderStatus.Pending == orderStatus)
-                {
-                    Assert.Throws<Exception>(() => CoinbaseApi.GetOrders(orderStatus));
-                    continue;
-                }
-
-                var orders = CoinbaseApi.GetOrders(orderStatus);
-                Assert.IsNotNull(orders);
-            }
+            var orders = CoinbaseApi.GetOrders(orderStatus);
+            Assert.IsNotNull(orders);
         }
 
-        [TestCase("BTC-USDC")]
-        public void GetProductCandlesWithDifferentCandleGranularity(string productId)
+        [TestCase(OrderStatus.Pending)]
+        public void GetListOrderWithNotSupportedOrderStatus(OrderStatus orderStatus)
         {
-            foreach (var candleGranularity in (CandleGranularity[])Enum.GetValues(typeof(CandleGranularity)))
-            {
-                var startDateTime = candleGranularity switch
-                {
-                    CandleGranularity.OneMinute => DateTime.UtcNow.AddMinutes(-10),
-                    CandleGranularity.OneHour => DateTime.UtcNow.AddHours(-5),
-                    CandleGranularity.OneDay => DateTime.UtcNow.AddDays(-7),
-                    _ => DateTime.UtcNow.AddHours(-10)
-                };
+            Assert.Throws<Exception>(() => CoinbaseApi.GetOrders(orderStatus));
+        }
 
-                // Not supported candle granularity request
-                if (candleGranularity == CandleGranularity.UnknownGranularity)
-                {
-                    Assert.Throws<Exception>(() => CoinbaseApi.GetProductCandles(productId, startDateTime, DateTime.UtcNow, candleGranularity));
-                    continue;
-                }
+        [TestCase(CandleGranularity.OneMinute, "25/12/2023 06:30:15", "25/12/2023 06:35:15")]
+        [TestCase(CandleGranularity.OneHour, "25/12/2023 06:30:15", "25/12/2023 11:35:15")]
+        [TestCase(CandleGranularity.OneDay, "24/12/2023 06:30:15", "26/12/2023 06:35:15")]
+        public void GetProductCandlesWithDifferentCandleGranularity(CandleGranularity candleGranularity, string startDate, string endDate, string productId = "BTC-USDC")
+        {
+            var startDateTime = DateTime.ParseExact(startDate, "dd/MM/yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            var endDateTime = DateTime.ParseExact(endDate, "dd/MM/yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
 
-                var candles = CoinbaseApi.GetProductCandles(productId, startDateTime, DateTime.UtcNow, candleGranularity);
+            var candles = CoinbaseApi.GetProductCandles(productId, startDateTime, endDateTime, candleGranularity);
 
-                Assert.IsNotNull(candles);
-                Assert.Greater(candles.Count(), 0);
-            }
+            Assert.IsNotNull(candles);
+            Assert.Greater(candles.Count(), 0);
+        }
+
+        [TestCase(CandleGranularity.UnknownGranularity, "25/12/2023 06:30:15", "25/12/2023 06:35:15")]
+        public void GetProductCandlesWithNotSupportedCandleGranularity(CandleGranularity candleGranularity, string startDate, string endDate, string productId = "BTC-USDC")
+        {
+            var startDateTime = DateTime.ParseExact(startDate, "dd/MM/yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+            var endDateTime = DateTime.ParseExact(endDate, "dd/MM/yyyy HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+
+            Assert.Throws<Exception>(() => CoinbaseApi.GetProductCandles(productId, startDateTime, endDateTime, candleGranularity));
         }
 
         [Test]

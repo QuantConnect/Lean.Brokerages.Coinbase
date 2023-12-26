@@ -20,7 +20,6 @@ using QuantConnect.Data;
 using QuantConnect.Logging;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 
 namespace QuantConnect.CoinbaseBrokerage.Tests
 {
@@ -71,7 +70,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 };
             }
 
-            _brokerage.Message += (_, brokerageMessageEvent) => {
+            _brokerage.Message += (_, brokerageMessageEvent) =>
+            {
                 Log.Debug("");
                 Log.Debug($"Brokerage:Error: {brokerageMessageEvent.Message}");
                 subscriptionEvent.Set();
@@ -141,22 +141,64 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             cancelationToken.Cancel();
         }
 
-        [Test]
-        public void SubscribeOnMultipleSymbols()
+        private static IEnumerable<TestCaseData> LiquidSymbolsSubscriptionConfigs
         {
-            var configs = GetRandomSymbols();
+            get
+            {
+                var liquidSymbols = new (string, Resolution)[10]
+                {
+                    ("SOLUSD",Resolution.Tick),
+                    ("BTCUSD", Resolution.Second),
+                    ("ETHUSD", Resolution.Tick),
+                    ("XRPUSD", Resolution.Second),
+                    ("ADAUSD", Resolution.Tick),
+                    ("AVAXUSD", Resolution.Second),
+                    ("DOGEUSD", Resolution.Tick),
+                    ("DOTUSD", Resolution.Second),
+                    ("LINKUSD", Resolution.Tick),
+                    ("MATICUSD", Resolution.Second)
+                };
+
+                var symbols = new List<SubscriptionDataConfig>();
+                foreach (var (ticker, resolution) in liquidSymbols)
+                {
+                    var symbol = Symbol.Create(ticker, SecurityType.Crypto, Market.Coinbase);
+
+                    if (resolution == Resolution.Tick)
+                    {
+                        var tradeConfig = new SubscriptionDataConfig(GetSubscriptionDataConfig<Tick>(symbol, resolution),
+                            tickType: TickType.Trade);
+                        var quoteConfig = new SubscriptionDataConfig(GetSubscriptionDataConfig<Tick>(symbol, resolution),
+                            tickType: TickType.Quote);
+
+                        symbols.AddRange(new[] { tradeConfig, quoteConfig });
+                    }
+                    else
+                    {
+                        symbols.AddRange(new[] { GetSubscriptionDataConfig<QuoteBar>(symbol, resolution), GetSubscriptionDataConfig<TradeBar>(symbol, resolution) });
+                    }
+                }
+
+                yield return new TestCaseData(symbols);
+            }
+        }
+
+        [Test, TestCaseSource(nameof(LiquidSymbolsSubscriptionConfigs))]
+        public void SubscribeOnMultipleSymbols(List<SubscriptionDataConfig> liquidSymbolsSubscriptionConfigs)
+        {
             var cancelationToken = new CancellationTokenSource();
             var startTime = DateTime.UtcNow;
             var tickResetEvent = new ManualResetEvent(false);
 
-            _brokerage.Message += (_, brokerageMessageEvent) => {
+            _brokerage.Message += (_, brokerageMessageEvent) =>
+            {
                 Log.Debug("");
                 Log.Debug($"Brokerage:Error: {brokerageMessageEvent.Message}");
                 cancelationToken.Cancel();
             };
 
             var symbolTicks = new Dictionary<Symbol, bool>();
-            foreach (var config in configs)
+            foreach (var config in liquidSymbolsSubscriptionConfigs)
             {
                 ProcessFeed(_brokerage.Subscribe(config, (s, e) => { }),
                     cancelationToken,
@@ -176,7 +218,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                                 symbolTicks[tick.Symbol] = true;
                             }
 
-                            if (symbolTicks.Count == configs.Count / 2)
+                            if (symbolTicks.Count == liquidSymbolsSubscriptionConfigs.Count / 2)
                             {
                                 tickResetEvent.Set();
                             }
@@ -189,7 +231,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 Assert.Fail("Reset event has not signaled or cancellationToken was canceled");
             }
 
-            foreach (var config in configs)
+            foreach (var config in liquidSymbolsSubscriptionConfigs)
             {
                 _brokerage.Unsubscribe(config);
             }
@@ -197,64 +239,6 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             Thread.Sleep(2000);
 
             cancelationToken.Cancel();
-        }
-
-        /// <summary>
-        /// Generates a list of random subscription configurations for liquid symbols.
-        /// </summary>
-        /// <returns>
-        /// A list of <see cref="SubscriptionDataConfig"/> instances representing random subscription configurations.
-        /// </returns>
-        /// <remarks>
-        /// This method creates a list of liquid symbols and generates random subscription configurations for each symbol.
-        /// The generated configurations include various resolutions and data types such as TradeBars, QuoteBars, Trades, and Quotes.
-        /// The resulting list of subscription configurations can be used to subscribe to real-time data streams for the specified symbols.
-        /// </remarks>
-        private static List<SubscriptionDataConfig> GetRandomSymbols()
-        {
-            var liquidSymbols = new string[10] { "SOLUSD", "BTCUSD", "ETHUSD", "XRPUSD", "ADAUSD", "AVAXUSD", "DOGEUSD", "DOTUSD", "LINKUSD", "MATICUSD" };
-
-            var symbols = new List<SubscriptionDataConfig>();
-            foreach (var ticker in liquidSymbols)
-            {
-                var symbol = Symbol.Create(ticker, SecurityType.Crypto, Market.Coinbase);
-
-                var resolution = GetRandomResolution();
-                if (resolution == Resolution.Tick)
-                {
-                    var tradeConfig = new SubscriptionDataConfig(GetSubscriptionDataConfig<Tick>(symbol, resolution),
-                        tickType: TickType.Trade);
-                    var quoteConfig = new SubscriptionDataConfig(GetSubscriptionDataConfig<Tick>(symbol, resolution),
-                        tickType: TickType.Quote);
-
-                    symbols.AddRange(new[] { tradeConfig, quoteConfig });
-                }
-                else
-                {
-                    symbols.AddRange(new[] { GetSubscriptionDataConfig<QuoteBar>(symbol, resolution), GetSubscriptionDataConfig<TradeBar>(symbol, resolution) });
-                }
-            }
-
-            return symbols;
-        }
-
-        /// <summary>
-        /// Generates and returns a random resolution from the available options.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="Resolution"/> value representing a randomly selected resolution,
-        /// including Tick, Second, or Daily.
-        /// </returns>
-        /// <remarks>
-        /// This method selects a random resolution from the available options: Tick, Second.
-        /// It uses a secure random number generator to ensure randomness in the resolution selection.
-        /// The generated resolution can be used in financial applications for specifying the time granularity
-        /// of data subscriptions or time intervals.
-        /// </remarks>
-        private static Resolution GetRandomResolution()
-        {
-            Array values = new[] { Resolution.Tick, Resolution.Second };
-            return (Resolution)values.GetValue(RandomNumberGenerator.GetInt32(values.Length));
         }
     }
 }
