@@ -46,7 +46,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// Represents a rate limiter for controlling the frequency of WebSocket operations.
         /// </summary>
         /// <see cref="https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-rate-limits"/>
-        private RateGate _webSocketRateLimit = new(750, TimeSpan.FromSeconds(1));
+        private RateGate _webSocketRateLimit = new(7, TimeSpan.FromSeconds(1));
 
         /// <summary>
         /// Use to sync subscription process on WebSocket User Updates
@@ -54,9 +54,19 @@ namespace QuantConnect.CoinbaseBrokerage
         private readonly ManualResetEvent _webSocketSubscriptionOnUserUpdateResetEvent = new(false);
 
         /// <summary>
+        /// Represents a ManualResetEvent used for controlling WebSocket subscriptions.
+        /// </summary>
+        private readonly ManualResetEvent _webSocketSubscriptionResetEvent = new(false);
+
+        /// <summary>
         /// Cancellation token source associated with this instance.
         /// </summary>
         private readonly CancellationTokenSource _cancellationTokenSource = new();
+
+        /// <summary>
+        /// Use like synchronization context for threads
+        /// </summary>
+        private readonly object _synchronizationContext = new object();
 
         /// <summary>
         /// Collection of partial split messages
@@ -73,13 +83,19 @@ namespace QuantConnect.CoinbaseBrokerage
             Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
                 ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
 
-                _webSocketSubscriptionOnUserUpdateResetEvent.Reset();
-            Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
-                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+                // TODO: not working properly: https://forums.coinbasecloud.dev/t/type-error-message-failure-to-subscribe/5689
+                //_webSocketSubscriptionOnUserUpdateResetEvent.Reset();
+                //Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
+                //ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
 
-                if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+                //if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+                //{
+                //    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe to channels"));
+                //}
+
+                if (SubscriptionManager.GetSubscribedSymbols().Any())
                 {
-                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe to channels"));
+                    RestoreDataSubscriptions();
                 }
             }, _cancellationTokenSource.Token);
         }
@@ -113,7 +129,7 @@ namespace QuantConnect.CoinbaseBrokerage
                     case CoinbaseWebSocketChannels.User:
                         var message2 = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
                         var orderUpdate = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
-                        if(orderUpdate.Events[0].Type == WebSocketEventType.Snapshot)
+                        if (orderUpdate.Events[0].Type == WebSocketEventType.Snapshot)
                         {
                             // When we have subscribed to whatever channel we should send signal to event 
                             _webSocketSubscriptionOnUserUpdateResetEvent.Set();
@@ -135,6 +151,10 @@ namespace QuantConnect.CoinbaseBrokerage
                                 throw new ArgumentException();
                         };
                         break;
+                    case CoinbaseWebSocketChannels.Subscriptions:
+                        Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
+                        _webSocketSubscriptionResetEvent.Set();
+                        break;
                 }
             }
             catch (Exception ex)
@@ -145,7 +165,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
         private void HandleOrderUpdate(List<CoinbaseWebSocketOrderResponse> orders)
         {
-            foreach(var order in orders)
+            foreach (var order in orders)
             {
                 var leanOrder = OrderProvider.GetOrdersByBrokerageId(order.OrderId).FirstOrDefault();
 
@@ -351,20 +371,10 @@ namespace QuantConnect.CoinbaseBrokerage
                 }
             }
 
-            var products = pendingSymbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
+            SubscribeSymbolsOnDataChannels(pendingSymbols);
 
-            if (products.Count == 0)
-            {
                 return true;
             }
-
-            foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
-            {
-                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, channel, products);
-            }
-
-            return true;
-        }
 
         /// <summary>
         /// Ends current subscriptions
@@ -379,6 +389,45 @@ namespace QuantConnect.CoinbaseBrokerage
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Restores data subscriptions existing
+        /// </summary>
+        private void RestoreDataSubscriptions()
+        {
+            List<Symbol> subscribedSymbols;
+            lock (_synchronizationContext)
+            {
+                subscribedSymbols = SubscriptionManager.GetSubscribedSymbols().ToList();
+            }
+
+            SubscribeSymbolsOnDataChannels(subscribedSymbols);
+        }
+
+        /// <summary>
+        /// Subscribes to real-time data channels for the provided list of symbols.
+        /// </summary>
+        /// <param name="symbols">The list of symbols to subscribe to.</param>
+        /// <remarks>
+        /// This method subscribes to WebSocket channels for each provided symbol, converting them to brokerage symbols using
+        /// the symbol mapper. It then iterates through the available WebSocket channels and manages the subscription by
+        /// invoking the <see cref="ManageChannelSubscription"/> method with the appropriate parameters.
+        /// </remarks>
+        /// <seealso cref="ManageChannelSubscription"/>
+        private void SubscribeSymbolsOnDataChannels(List<Symbol> symbols)
+        {
+            var products = symbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
+
+            if (products.Count == 0)
+        {
+                return;
+            }
+
+            foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
+            {
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, channel, products);
+            }
         }
 
         /// <summary>
@@ -401,6 +450,8 @@ namespace QuantConnect.CoinbaseBrokerage
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
 
+            _webSocketSubscriptionResetEvent.Reset();
+
             var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
 
             var json = JsonConvert.SerializeObject(
@@ -408,7 +459,14 @@ namespace QuantConnect.CoinbaseBrokerage
 
             Log.Debug("SubscribeToChannel:send json message: " + json);
 
+            _webSocketRateLimit.WaitToProceed();
+
             WebSocket.Send(json);
+
+            if (!_webSocketSubscriptionResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+            {
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "WSSubscription", $"Failed to {subscriptionType} to channels: {channel} with {string.Join(',', productIds)}"));
+            }
         }
 
         private class PendingOrder
