@@ -49,6 +49,11 @@ namespace QuantConnect.CoinbaseBrokerage
         private RateGate _webSocketRateLimit = new(7, TimeSpan.FromSeconds(1));
 
         /// <summary>
+        /// Represents an integer variable used to keep track of sequence numbers associated with WS feed messages.
+        /// </summary>
+        private int _sequenceNumbers = 0;
+
+        /// <summary>
         /// Use to sync subscription process on WebSocket User Updates
         /// </summary>
         private readonly ManualResetEvent _webSocketSubscriptionOnUserUpdateResetEvent = new(false);
@@ -114,6 +119,16 @@ namespace QuantConnect.CoinbaseBrokerage
             try
             {
                 var obj = JObject.Parse(data.Message);
+
+                var newSequenceNumbers = obj["sequence_num"].Value<int>();
+
+                // https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-overview#sequence-numbers
+                if (newSequenceNumbers != 0 && newSequenceNumbers != _sequenceNumbers + 1)
+                {
+                    return;
+                }
+
+                _sequenceNumbers = newSequenceNumbers;
 
                 var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
 
@@ -262,7 +277,7 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, MarketName);
 
-                _aggregator.Update(new Tick
+                var tick = new Tick
                 {
                     Value = trade.Price.Value,
                     Time = trade.Time.UtcDateTime,
@@ -270,8 +285,13 @@ namespace QuantConnect.CoinbaseBrokerage
                     TickType = TickType.Trade,
                     Quantity = trade.Size.Value,
                     Exchange = MarketName
-                });
+                };
+
+                lock (_synchronizationContext)
+                {
+                    _aggregator.Update(tick); 
             }
+        }
         }
 
         private void EmitFillOrderEvent(Fill fill, Order order)
@@ -339,7 +359,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <param name="askSize">The ask price</param>
         private void EmitQuoteTick(Symbol symbol, decimal bidPrice, decimal bidSize, decimal askPrice, decimal askSize)
         {
-            _aggregator.Update(new Tick
+            var tick = new Tick
             {
                 AskPrice = askPrice,
                 BidPrice = bidPrice,
@@ -349,7 +369,13 @@ namespace QuantConnect.CoinbaseBrokerage
                 TickType = TickType.Quote,
                 AskSize = askSize,
                 BidSize = bidSize
-            });
+            };
+            tick.SetValue();
+
+            lock (_synchronizationContext)
+            {
+                _aggregator.Update(tick); 
+            }
         }
 
         /// <summary>
@@ -438,7 +464,7 @@ namespace QuantConnect.CoinbaseBrokerage
             var json = JsonConvert.SerializeObject(
                 new CoinbaseSubscriptionMessage(apiKey, channel, productIds, signature, timestamp, subscriptionType));
 
-            Log.Debug("SubscribeToChannel:send json message: " + json);
+            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}:send json message: " + json);
 
             _webSocketRateLimit.WaitToProceed();
 
