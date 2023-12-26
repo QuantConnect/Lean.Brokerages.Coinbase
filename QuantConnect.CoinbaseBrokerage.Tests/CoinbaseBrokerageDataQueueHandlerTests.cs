@@ -186,7 +186,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
             if (!tickResetEvent.WaitOne(TimeSpan.FromSeconds(120), cancelationToken.Token))
             {
-                Assert.Fail("");
+                Assert.Fail("Reset event has not signaled or cancellationToken was canceled");
             }
 
             foreach (var config in configs)

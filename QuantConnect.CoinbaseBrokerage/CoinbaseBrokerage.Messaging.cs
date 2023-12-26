@@ -357,21 +357,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
         {
-            var fullList = GetSubscribed().Union(symbols);
-            var pendingSymbols = new List<Symbol>();
-            foreach (var item in fullList)
-            {
-                if (_symbolMapper.IsKnownLeanSymbol(item))
-                {
-                    pendingSymbols.Add(item);
-                }
-                else if (item.SecurityType == SecurityType.Crypto)
-                {
-                    Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Unknown symbol: {item.Value}");
-                }
-            }
-
-            SubscribeSymbolsOnDataChannels(pendingSymbols);
+            SubscribeSymbolsOnDataChannels(symbols.ToList());
 
                 return true;
             }
@@ -381,12 +367,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         public bool Unsubscribe(IEnumerable<Symbol> leanSymbols)
         {
-            var brokerageSymbols = leanSymbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
-
-            foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
-            {
-                ManageChannelSubscription(WebSocketSubscriptionType.Unsubscribe, channel, brokerageSymbols);
-            }
+            SubscribeSymbolsOnDataChannels(leanSymbols.ToList(), WebSocketSubscriptionType.Unsubscribe);
 
             return true;
         }
@@ -415,7 +396,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// invoking the <see cref="ManageChannelSubscription"/> method with the appropriate parameters.
         /// </remarks>
         /// <seealso cref="ManageChannelSubscription"/>
-        private void SubscribeSymbolsOnDataChannels(List<Symbol> symbols)
+        private void SubscribeSymbolsOnDataChannels(List<Symbol> symbols, WebSocketSubscriptionType subscriptionType = WebSocketSubscriptionType.Subscribe)
         {
             var products = symbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
 
@@ -426,7 +407,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
             foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
             {
-                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, channel, products);
+                ManageChannelSubscription(subscriptionType, channel, products);
             }
         }
 
