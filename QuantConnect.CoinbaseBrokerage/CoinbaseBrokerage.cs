@@ -162,8 +162,6 @@ namespace QuantConnect.CoinbaseBrokerage
             _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
             OrderProvider = orderProvider;
 
-            FillSplit = new ConcurrentDictionary<long, GDAXFill>();
-
             SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()
             {
                 SubscribeImpl = (symbols, _) => Subscribe(symbols),
@@ -193,22 +191,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage));
                 return false;
             }
-
-            //TODO: Why did we use this ?
-            //if (CachedOrderIDs.ContainsKey(order.Id))
-            //{
-            //    CachedOrderIDs[order.Id].BrokerId.Add(response.OrderId);
-            //}
-            //else
-            //{
-            //    order.BrokerId.Add(response.OrderId);
-            //    CachedOrderIDs.TryAdd(order.Id, order);
-            //}
-
-            //// Add fill splits in all cases; we'll need to handle market fills too.
-            //FillSplit.TryAdd(order.Id, new GDAXFill(order));
-
-            //_pendingOrders.TryAdd(response.OrderId, new PendingOrder(order));
 
             order.BrokerId.Add(response.OrderId);
 
@@ -245,9 +227,6 @@ namespace QuantConnect.CoinbaseBrokerage
                     $"Coinbase has not canceled order, error: {cancelOrder.FailureReason}"));
                 return false;
             }
-
-            // TODO: Why did we use this ?
-            _pendingOrders.TryRemove(cancelOrder.OrderId, out _);
 
             OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "Coinbase Order Event")
             { Status = OrderStatus.Canceled });
@@ -326,19 +305,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 leanOrder.BrokerId.Add(order.OrderId);
 
                 list.Add(leanOrder);
-            }
-
-            // TODO: Why did we use this ?
-            foreach (var item in list)
-            {
-                if (item.Status.IsOpen())
-                {
-                    var cached = CachedOrderIDs.Where(c => c.Value.BrokerId.Contains(item.BrokerId.First()));
-                    if (cached.Any())
-                    {
-                        CachedOrderIDs[cached.First().Key] = item;
-                    }
-                }
             }
 
             return list;

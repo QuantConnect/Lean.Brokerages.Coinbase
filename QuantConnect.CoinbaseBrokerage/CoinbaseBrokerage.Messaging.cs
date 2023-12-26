@@ -73,19 +73,12 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         private readonly object _synchronizationContext = new object();
 
-        /// <summary>
-        /// Collection of partial split messages
-        /// </summary>
-        public ConcurrentDictionary<long, GDAXFill> FillSplit { get; set; }
-
-        private readonly ConcurrentDictionary<string, PendingOrder> _pendingOrders = new();
-
         private void SubscribeOnWebSocketFeed(object _, EventArgs __)
         {
             // launch a task so we don't block WebSocket and can send and receive
             Task.Factory.StartNew(() =>
             {
-            Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
+                Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
                 ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
 
                 // TODO: not working properly: https://forums.coinbasecloud.dev/t/type-error-message-failure-to-subscribe/5689
@@ -188,7 +181,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     continue;
                 }
-        }
+            }
         }
 
         private void Level2Snapshot(CoinbaseLevel2Event snapshotData)
@@ -287,64 +280,9 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 lock (_synchronizationContext)
                 {
-                    _aggregator.Update(tick); 
+                    _aggregator.Update(tick);
+                }
             }
-        }
-        }
-
-        private void EmitFillOrderEvent(Fill fill, Order order)
-        {
-            var symbol = _symbolMapper.GetLeanSymbol(fill.ProductId, SecurityType.Crypto, MarketName);
-
-            if (!FillSplit.ContainsKey(order.Id))
-            {
-                FillSplit[order.Id] = new GDAXFill(order);
-            }
-
-            var split = FillSplit[order.Id];
-            split.Add(fill);
-
-            // is this the total order at once? Is this the last split fill?
-            var isFinalFill = Math.Abs(fill.Size) == Math.Abs(order.Quantity) || Math.Abs(split.OrderQuantity) == Math.Abs(split.TotalQuantity);
-
-            var status = isFinalFill ? Orders.OrderStatus.Filled : Orders.OrderStatus.PartiallyFilled;
-
-            var direction = fill.Side == "sell" ? OrderDirection.Sell : OrderDirection.Buy;
-
-            var fillPrice = fill.Price;
-            var fillQuantity = direction == OrderDirection.Sell ? -fill.Size : fill.Size;
-
-            string currency;
-            if (order.PriceCurrency.IsNullOrEmpty())
-            {
-                CurrencyPairUtil.DecomposeCurrencyPair(symbol, out string baseCurrency, out string quoteCurrency);
-                currency = quoteCurrency;
-            }
-            else
-            {
-                currency = order.PriceCurrency;
-            }
-
-            var orderFee = new OrderFee(new CashAmount(fill.Fee, currency));
-
-            var orderEvent = new OrderEvent
-            (
-                order.Id, symbol, fill.CreatedAt, status,
-                direction, fillPrice, fillQuantity,
-                orderFee, $"GDAX Fill Event {direction}"
-            );
-
-            // when the order is completely filled, we no longer need it in the active order list
-            if (orderEvent.Status == Orders.OrderStatus.Filled)
-            {
-                Order outOrder;
-                CachedOrderIDs.TryRemove(order.Id, out outOrder);
-
-                PendingOrder removed;
-                _pendingOrders.TryRemove(fill.OrderId, out removed);
-            }
-
-            OnOrderEvent(orderEvent);
         }
 
         /// <summary>
@@ -371,7 +309,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
             lock (_synchronizationContext)
             {
-                _aggregator.Update(tick); 
+                _aggregator.Update(tick);
             }
         }
 
@@ -393,8 +331,8 @@ namespace QuantConnect.CoinbaseBrokerage
 
             SubscribeSymbolsOnDataChannels(symbols.Concat(subscribedSymbols).ToList());
 
-                return true;
-            }
+            return true;
+        }
 
         /// <summary>
         /// Ends current subscriptions
@@ -435,7 +373,7 @@ namespace QuantConnect.CoinbaseBrokerage
             var products = symbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
 
             if (products.Count == 0)
-        {
+            {
                 return;
             }
 
@@ -481,17 +419,6 @@ namespace QuantConnect.CoinbaseBrokerage
             if (!_webSocketSubscriptionResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
             {
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "WSSubscription", $"Failed to {subscriptionType} to channels: {channel} with {string.Join(',', productIds)}"));
-            }
-        }
-
-        private class PendingOrder
-        {
-            public Order Order { get; }
-            public long LastEmittedFillTradeId { get; set; }
-
-            public PendingOrder(Order order)
-            {
-                Order = order;
             }
         }
     }
