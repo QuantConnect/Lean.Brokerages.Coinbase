@@ -36,9 +36,6 @@ public class Update
     [JsonConverter(typeof(StringEnumConverter))]
     public CoinbaseLevel2UpdateSide Side { get; set; }
 
-    [JsonProperty("event_time")]
-    public DateTimeOffset EventTime { get; set; }
-
     [JsonProperty("price_level")]
     public decimal? PriceLevel { get; set; }
 

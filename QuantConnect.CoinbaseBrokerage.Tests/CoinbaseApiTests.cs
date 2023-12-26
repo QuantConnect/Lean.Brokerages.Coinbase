@@ -162,7 +162,6 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             Assert.Greater(level2Data.Events[0].Updates.Count, 0);
             foreach (var tick in level2Data.Events[0].Updates)
             {
-                Assert.IsInstanceOf<DateTimeOffset>(tick.EventTime);
                 Assert.GreaterOrEqual(tick.NewQuantity, 0);
                 Assert.GreaterOrEqual(tick.PriceLevel, 0);
                 Assert.IsInstanceOf<CoinbaseLevel2UpdateSide>(tick.Side);
