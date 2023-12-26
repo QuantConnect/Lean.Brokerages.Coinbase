@@ -383,7 +383,18 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
         {
-            SubscribeSymbolsOnDataChannels(symbols.ToList());
+            List<Symbol> subscribedSymbols;
+
+            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Starting Unsubscribe...");
+            subscribedSymbols = SubscriptionManager.GetSubscribedSymbols().ToList();
+
+            if (subscribedSymbols.Count > 0)
+            {
+                SubscribeSymbolsOnDataChannels(subscribedSymbols, WebSocketSubscriptionType.Unsubscribe);
+            }
+            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Finish Unsubscribe.");
+
+            SubscribeSymbolsOnDataChannels(symbols.Concat(subscribedSymbols).ToList());
 
                 return true;
             }
