@@ -70,7 +70,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <summary>
         /// Represents the name of the market associated with the application.
         /// </summary>
-        private static readonly string MarketName = Market.GDAX;
+        private static readonly string MarketName = Market.Coinbase;
 
         /// <summary>
         /// Checks if the WebSocket connection is connected or in the process of connecting
