@@ -215,6 +215,23 @@ public class CoinbaseApi : IDisposable
     }
 
     /// <summary>
+    /// Edits an existing limit order on Coinbase brokerage.
+    /// </summary>
+    /// <param name="leanOrder">The limit order to be edited.</param>
+    /// <returns>A response containing information about the edited order.</returns>
+    public CoinbaseEditOrderResponse EditOrder(LimitOrder leanOrder)
+    {
+        var request = new RestRequest($"{_apiPrefix}/brokerage/orders/edit", Method.POST);
+
+        request.AddJsonBody(JsonConvert.SerializeObject(
+            new CoinbaseEditOrderRequest(leanOrder.BrokerId.Single(), leanOrder.LimitPrice, leanOrder.AbsoluteQuantity), _jsonSerializerSettings));
+
+        var response = _apiClient.ExecuteRequest(request);
+
+        return JsonConvert.DeserializeObject<CoinbaseEditOrderResponse>(response.Content);
+    }
+
+    /// <summary>
     /// Creates a new Coinbase order based on the specified Lean order.
     /// </summary>
     /// <param name="leanOrder">The Lean order object containing the order details.</param>

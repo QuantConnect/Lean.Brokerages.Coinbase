@@ -16,10 +16,13 @@
 using Moq;
 using System;
 using NUnit.Framework;
+using System.Threading;
 using QuantConnect.Orders;
+using QuantConnect.Logging;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
 using QuantConnect.Brokerages;
+using System.Collections.Generic;
 using QuantConnect.Configuration;
 using QuantConnect.Tests.Brokerages;
 using QuantConnect.CoinbaseBrokerage.Api;
@@ -146,7 +149,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             base.ShortFromLong(parameters);
         }
 
-        [Explicit("Order modification not allowed")]
+        [Test, TestCaseSource(nameof(OrderParameters))]
         public override void LongFromShort(OrderTestParameters parameters)
         {
             base.LongFromShort(parameters);
@@ -163,6 +166,93 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             Assert.IsNotNull(tick);
             Assert.Greater(tick.BestAsk, 0);
             Assert.Greater(tick.BestBid, 0);
+        }
+
+        private static IEnumerable<(OrderTestParameters, decimal, decimal, bool)> UpdateOrderPrams()
+        {
+                var symbol = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
+            var limitTestParam = new LimitOrderTestParameters(symbol, 10_000m, 9_000m, new CoinbaseOrderProperties());
+            yield return (limitTestParam, 0.0000328m, 12_000m, true);
+            yield return (limitTestParam, 12_000m, 0.0000328m, false);
+            }
+
+        [TestCaseSource(nameof(UpdateOrderPrams))]
+        public void UpdateOrderTest((OrderTestParameters orderTestParam, decimal newAmount, decimal newLimitPrice, bool isSuccessfullyUpdated) testData)
+        {
+            var order = testData.orderTestParam.CreateLongOrder(GetDefaultQuantity());
+            var errorMessage = "";
+            var statusResetEvent = new AutoResetEvent(false);
+
+            OrderProvider.Add(order);
+
+            Brokerage.Message += (_, BrokerageMessageEvent) =>
+            {
+                errorMessage = BrokerageMessageEvent.Message;
+            };
+
+            EventHandler<List<OrderEvent>> orderStatusCallback = (sender, orderEvents) =>
+            {
+                var orderEvent = orderEvents[0];
+
+                order.Status = orderEvent.Status;
+
+                if (orderEvent.Status == OrderStatus.Invalid)
+                {
+                    Assert.Fail("Unexpected order status: " + orderEvent.Status);
+                }
+                else
+                {
+                    statusResetEvent.Set();
+                }
+            };
+
+            Brokerage.OrdersStatusChanged += orderStatusCallback;
+
+            var placeLimitOrder = Brokerage.PlaceOrder(order);
+
+            Assert.IsTrue(placeLimitOrder);
+            Assert.IsTrue(statusResetEvent.WaitOne(TimeSpan.FromSeconds(2)) && order.Status == OrderStatus.Submitted);
+
+            var updateOrder = new UpdateOrderRequest(DateTime.UtcNow, order.Id, new UpdateOrderFields() { Quantity = testData.newAmount, LimitPrice = testData.newLimitPrice });
+
+            order.ApplyUpdateOrderRequest(updateOrder);
+
+            var updateResult = Brokerage.UpdateOrder(order);
+
+            if (testData.isSuccessfullyUpdated)
+            {
+                Assert.IsTrue(updateResult);
+                Assert.IsTrue(statusResetEvent.WaitOne(TimeSpan.FromSeconds(2)) && order.Status == OrderStatus.UpdateSubmitted);
+                Assert.IsEmpty(errorMessage);
+            }
+            else
+            {
+                Assert.IsFalse(updateResult);
+                Assert.IsNotEmpty(errorMessage);
+                Assert.IsTrue(order.Status == OrderStatus.Submitted);
+            }
+
+            Brokerage.OrdersStatusChanged -= orderStatusCallback;
+        }
+
+        private static IEnumerable<OrderTestParameters> UpdateOrderWrongPrams()
+        {
+            var symbol = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
+            yield return new MarketOrderTestParameters(symbol);
+            yield return new StopLimitOrderTestParameters(symbol, 10_000m, 5_000m);
+        }
+
+        [Test, TestCaseSource(nameof(UpdateOrderWrongPrams))]
+        public void UpdateOrderWithWrongParameters(OrderTestParameters orderTestParam)
+        {
+            var order = orderTestParam switch
+            {
+                MarketOrderTestParameters m => m.CreateLongMarketOrder(1),
+                StopLimitOrderTestParameters sl => sl.CreateLongOrder(1),
+                _ => throw new NotImplementedException("The Order type is not implemented.")
+            };
+
+            Assert.Throws<NotSupportedException>(() => Brokerage.UpdateOrder(order));
         }
     }
 }

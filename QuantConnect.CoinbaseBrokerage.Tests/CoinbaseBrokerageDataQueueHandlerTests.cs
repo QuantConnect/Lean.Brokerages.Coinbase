@@ -31,7 +31,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     {
         private CoinbaseBrokerage _brokerage { get => (CoinbaseBrokerage)Brokerage; }
 
-        private static readonly Symbol BTCUSDC = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.GDAX);
+        private static readonly Symbol BTCUSDC = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Coinbase);
 
         private static IEnumerable<TestCaseData> TestParameters
         {

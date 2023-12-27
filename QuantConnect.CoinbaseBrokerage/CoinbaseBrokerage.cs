@@ -208,8 +208,26 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <returns></returns>
         public override bool UpdateOrder(Order order)
         {
-            // Is temporarily unavailable, Status: https://status.coinbase.com/incidents/7y4cpt0r2dcd
-            throw new NotSupportedException($"{nameof(CoinbaseBrokerage)}.{nameof(UpdateOrder)}: Order update not supported. Please cancel and re-create.");
+            if(order.Type != OrderType.Limit)
+            {
+                throw new NotSupportedException($"{nameof(CoinbaseBrokerage)}.{nameof(UpdateOrder)}: Order update supports only ${nameof(OrderType.Limit)} Order Type. Please check your order type.");
+            }
+
+            var response = _coinbaseApi.EditOrder(order as LimitOrder);
+
+            if (!response.Success)
+            {
+                var errorMessage = response.Errors[0].PreviewFailureReason;
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "UpdateOrderInvalid", errorMessage));
+                return false;
+            }
+
+            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
+            {
+                Status = OrderStatus.UpdateSubmitted
+            });
+
+            return true;
         }
 
         /// <summary>
