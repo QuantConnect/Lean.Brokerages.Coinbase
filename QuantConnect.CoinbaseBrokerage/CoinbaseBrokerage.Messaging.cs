@@ -59,11 +59,6 @@ namespace QuantConnect.CoinbaseBrokerage
         private readonly ManualResetEvent _webSocketSubscriptionOnUserUpdateResetEvent = new(false);
 
         /// <summary>
-        /// Represents a ManualResetEvent used for controlling WebSocket subscriptions.
-        /// </summary>
-        private readonly ManualResetEvent _webSocketSubscriptionResetEvent = new(false);
-
-        /// <summary>
         /// Cancellation token source associated with this instance.
         /// </summary>
         private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -90,11 +85,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 //{
                 //    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe to channels"));
                 //}
-
-                if (SubscriptionManager.GetSubscribedSymbols().Any())
-                {
-                    RestoreDataSubscriptions();
-                }
             }, _cancellationTokenSource.Token);
         }
 
@@ -157,10 +147,6 @@ namespace QuantConnect.CoinbaseBrokerage
                             default:
                                 throw new ArgumentException();
                         };
-                        break;
-                    case CoinbaseWebSocketChannels.Subscriptions:
-                        Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
-                        _webSocketSubscriptionResetEvent.Set();
                         break;
                 }
             }
@@ -317,18 +303,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
         {
-            List<Symbol> subscribedSymbols;
-
-            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Starting Unsubscribe...");
-            subscribedSymbols = SubscriptionManager.GetSubscribedSymbols().ToList();
-
-            if (subscribedSymbols.Count > 0)
-            {
-                SubscribeSymbolsOnDataChannels(subscribedSymbols, WebSocketSubscriptionType.Unsubscribe);
-            }
-            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}: Finish Unsubscribe.");
-
-            SubscribeSymbolsOnDataChannels(symbols.Concat(subscribedSymbols).ToList());
+            SubscribeSymbolsOnDataChannels(symbols.ToList());
 
             return true;
         }
@@ -341,20 +316,6 @@ namespace QuantConnect.CoinbaseBrokerage
             SubscribeSymbolsOnDataChannels(leanSymbols.ToList(), WebSocketSubscriptionType.Unsubscribe);
 
             return true;
-        }
-
-        /// <summary>
-        /// Restores data subscriptions existing
-        /// </summary>
-        private void RestoreDataSubscriptions()
-        {
-            List<Symbol> subscribedSymbols;
-            lock (_synchronizationContext)
-            {
-                subscribedSymbols = SubscriptionManager.GetSubscribedSymbols().ToList();
-            }
-
-            SubscribeSymbolsOnDataChannels(subscribedSymbols);
         }
 
         /// <summary>
@@ -402,8 +363,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
 
-            _webSocketSubscriptionResetEvent.Reset();
-
             var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
 
             var json = JsonConvert.SerializeObject(
@@ -414,11 +373,6 @@ namespace QuantConnect.CoinbaseBrokerage
             _webSocketRateLimit.WaitToProceed();
 
             WebSocket.Send(json);
-
-            if (!_webSocketSubscriptionResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "WSSubscription", $"Failed to {subscriptionType} to channels: {channel} with {string.Join(',', productIds)}"));
-            }
         }
     }
 }
