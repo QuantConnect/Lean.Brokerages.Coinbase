@@ -108,8 +108,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         // no stop limit support
         private static TestCaseData[] OrderParameters => new[]
         {
-            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), new CoinbaseOrderProperties())),
-            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m, new CoinbaseOrderProperties())),
+            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX))),
+            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m)),
         };
 
         [Test, TestCaseSource(nameof(OrderParameters))]

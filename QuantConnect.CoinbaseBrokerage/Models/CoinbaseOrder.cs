@@ -385,7 +385,7 @@ public class LimitGtc : Limit
     /// If any part of the order results in taking liquidity, the order will be rejected and no part of it will execute.
     /// </summary>
     [JsonProperty("post_only")]
-    public bool PostOnly { get; set; }
+    public bool? PostOnly { get; set; }
 }
 
 /// <summary>

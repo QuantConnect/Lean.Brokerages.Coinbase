@@ -277,11 +277,6 @@ public class CoinbaseApi : IDisposable
 
         var orderProperties = leanOrder.Properties as CoinbaseOrderProperties;
 
-        if (orderProperties == null)
-        {
-            throw new ArgumentException($"Order properties should be of {nameof(CoinbaseOrderProperties)} type.");
-        }
-
         switch (leanOrder)
         {
             case MarketOrder:
@@ -308,7 +303,7 @@ public class CoinbaseApi : IDisposable
                         }
                     };
 
-                    model.OrderConfiguration.LimitGtc.PostOnly = orderProperties.PostOnly;
+                    model.OrderConfiguration.LimitGtc.PostOnly = orderProperties?.PostOnly;
                     break;
                 }
             case LimitOrder limitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilDateTimeInForce tilDate:
@@ -323,7 +318,7 @@ public class CoinbaseApi : IDisposable
                         }
                     };
 
-                    model.OrderConfiguration.LimitGtc.PostOnly = orderProperties.PostOnly;
+                    model.OrderConfiguration.LimitGtd.PostOnly = orderProperties?.PostOnly;
                     break;
                 }
             case StopLimitOrder stopLimitOrder when leanOrder.TimeInForce is Orders.TimeInForces.GoodTilCanceledTimeInForce:
@@ -360,7 +355,7 @@ public class CoinbaseApi : IDisposable
             default: throw new NotSupportedException($"Order type {leanOrder.Type.ToStringInvariant()} is not supported");
         };
 
-        if (orderProperties.SelfTradePreventionId)
+        if (orderProperties?.SelfTradePreventionId == true)
         {
             model.SelfTradePreventionId = Guid.NewGuid();
         }
