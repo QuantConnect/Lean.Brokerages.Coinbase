@@ -315,7 +315,6 @@ namespace QuantConnect.CoinbaseBrokerage
                     Symbol = symbol,
                     TickType = TickType.Trade,
                     Quantity = trade.Size.Value,
-                    Exchange = MarketName
                 };
 
                 lock (_synchronizationContext)

@@ -168,7 +168,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
 
-            // ValidateSubscription();
+            ValidateSubscription();
         }
 
         #region IBrokerage
@@ -542,7 +542,7 @@ namespace QuantConnect.CoinbaseBrokerage
             catch (Exception e)
             {
                 Log.Error($"ValidateSubscription(): Failed during validation, shutting down. Error : {e.Message}");
-                System.Environment.Exit(1);
+                Environment.Exit(1);
             }
         }
     }
