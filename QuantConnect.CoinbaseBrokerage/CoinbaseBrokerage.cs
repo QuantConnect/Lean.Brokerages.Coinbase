@@ -208,7 +208,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <returns></returns>
         public override bool UpdateOrder(Order order)
         {
-            if(order.Type != OrderType.Limit)
+            if (order.Type != OrderType.Limit)
             {
                 throw new NotSupportedException($"{nameof(CoinbaseBrokerage)}.{nameof(UpdateOrder)}: Order update supports only ${nameof(OrderType.Limit)} Order Type. Please check your order type.");
             }
@@ -257,6 +257,12 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         public override void Connect()
         {
+            // token may be canceled anywhere then we need reset one
+            if (_cancellationTokenSource.Token.IsCancellationRequested && !_cancellationTokenSource.TryReset())
+            {
+                _cancellationTokenSource.DisposeSafely();
+                _cancellationTokenSource = new();
+            }
             base.Connect();
         }
 

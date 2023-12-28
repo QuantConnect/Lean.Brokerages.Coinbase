@@ -18,7 +18,6 @@ using System;
 using NUnit.Framework;
 using System.Threading;
 using QuantConnect.Orders;
-using QuantConnect.Logging;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
 using QuantConnect.Brokerages;
@@ -48,7 +47,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
         protected override decimal GetDefaultQuantity()
         {
-            return 0.000016m;
+            return 0.000023m;
         }
         #endregion
 
@@ -65,7 +64,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             var algorithmSettings = new AlgorithmSettings();
             var algorithm = new Mock<IAlgorithm>();
             algorithm.Setup(a => a.Transactions).Returns(transactions);
-            algorithm.Setup(a => a.BrokerageModel).Returns(new GDAXBrokerageModel());
+            algorithm.Setup(a => a.BrokerageModel).Returns(new CoinbaseBrokerageModel());
             algorithm.Setup(a => a.Portfolio).Returns(new SecurityPortfolioManager(securities, transactions, algorithmSettings));
             algorithm.Setup(a => a.Securities).Returns(securities);
 
@@ -76,7 +75,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
             _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
 
-            return new CoinbaseBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, new AggregationManager(), null);
+            return new CoinbaseBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, orderProvider, new AggregationManager(), null);
         }
 
         /// <summary>
@@ -109,8 +108,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         // no stop limit support
         private static TestCaseData[] OrderParameters => new[]
         {
-            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX))),
-            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m)),
+            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), new CoinbaseOrderProperties())),
+            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m, new CoinbaseOrderProperties())),
         };
 
         [Test, TestCaseSource(nameof(OrderParameters))]
@@ -143,7 +142,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             base.CloseFromShort(parameters);
         }
 
-        [Explicit("Order modification not allowed")]
+        [Test, TestCaseSource(nameof(OrderParameters))]
         public override void ShortFromLong(OrderTestParameters parameters)
         {
             base.ShortFromLong(parameters);
@@ -170,11 +169,11 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
         private static IEnumerable<(OrderTestParameters, decimal, decimal, bool)> UpdateOrderPrams()
         {
-                var symbol = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
+            var symbol = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
             var limitTestParam = new LimitOrderTestParameters(symbol, 10_000m, 9_000m, new CoinbaseOrderProperties());
             yield return (limitTestParam, 0.0000328m, 12_000m, true);
             yield return (limitTestParam, 12_000m, 0.0000328m, false);
-            }
+        }
 
         [TestCaseSource(nameof(UpdateOrderPrams))]
         public void UpdateOrderTest((OrderTestParameters orderTestParam, decimal newAmount, decimal newLimitPrice, bool isSuccessfullyUpdated) testData)

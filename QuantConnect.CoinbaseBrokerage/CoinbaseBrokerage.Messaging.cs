@@ -61,7 +61,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <summary>
         /// Cancellation token source associated with this instance.
         /// </summary>
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private CancellationTokenSource _cancellationTokenSource = new();
 
         /// <summary>
         /// Use like synchronization context for threads
@@ -77,14 +77,14 @@ namespace QuantConnect.CoinbaseBrokerage
                 ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
 
                 // TODO: not working properly: https://forums.coinbasecloud.dev/t/type-error-message-failure-to-subscribe/5689
-                //_webSocketSubscriptionOnUserUpdateResetEvent.Reset();
-                //Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
-                //ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+                _webSocketSubscriptionOnUserUpdateResetEvent.Reset();
+                Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
 
-                //if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
-                //{
-                //    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe to channels"));
-                //}
+                if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+                {
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe on `user update` channels"));
+                }
             }, _cancellationTokenSource.Token);
         }
 
@@ -103,6 +103,16 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 var obj = JObject.Parse(data.Message);
 
+                var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
+
+                //this means an error has occurred
+                if (channel == null)
+                {
+                    Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}.ERROR: {data.Message}");
+                    _cancellationTokenSource.Cancel();
+                    return;
+                }
+
                 var newSequenceNumbers = obj["sequence_num"].Value<int>();
 
                 // https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-overview#sequence-numbers
@@ -112,8 +122,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 }
 
                 _sequenceNumbers = newSequenceNumbers;
-
-                var channel = obj[CoinbaseWebSocketChannels.Channel]?.Value<string>();
 
                 switch (channel)
                 {
@@ -132,7 +140,7 @@ namespace QuantConnect.CoinbaseBrokerage
                             _webSocketSubscriptionOnUserUpdateResetEvent.Set();
                             break;
                         }
-                        HandleOrderUpdate(orderUpdate.Events[0].Orders);
+                        HandleOrderUpdate(orderUpdate.Events[0].Orders, orderUpdate.Timestamp.UtcDateTime);
                         break;
                     case CoinbaseWebSocketChannels.Level2Response:
                         var level2Data = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseLevel2Event>>();
@@ -156,7 +164,12 @@ namespace QuantConnect.CoinbaseBrokerage
             }
         }
 
-        private void HandleOrderUpdate(List<CoinbaseWebSocketOrderResponse> orders)
+        /// <summary>
+        /// Handle order update based on WS message
+        /// </summary>
+        /// <param name="orders">brokerage order</param>
+        /// <param name="eventTimestampUtc">timestamp(UTC) is occurred event </param>
+        private void HandleOrderUpdate(List<CoinbaseWebSocketOrderResponse> orders, DateTime eventTimestampUtc)
         {
             foreach (var order in orders)
             {
@@ -166,6 +179,48 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     continue;
                 }
+
+                // Skip: pending on brokerage
+                // Skip: cancel status cuz we return order message from CancelOrder()
+                if (order.Status == Models.Enums.OrderStatus.Pending || order.Status == Models.Enums.OrderStatus.Cancelled)
+                {
+                    continue;
+                }
+
+                // Skip: Order was submitted on brokerage - successfully
+                if (order.Status == Models.Enums.OrderStatus.Open && order.CumulativeQuantity == 0)
+                {
+                    continue;
+                }
+
+                // Skip: Order was filled but brokerage has not return status.Filled yet
+                if (order.LeavesQuantity == 0 && order.Status == Models.Enums.OrderStatus.Open)
+                {
+                    continue;
+                }
+
+                // order.CumulativeQuantity > 0 && order.LeavesQuantity != 0 && order.Status == Models.Enums.OrderStatus.Open
+                var leanOrderStatus = Orders.OrderStatus.PartiallyFilled;
+
+                if (order.LeavesQuantity == 0 && order.Status == Models.Enums.OrderStatus.Filled)
+                {
+                    leanOrderStatus = Orders.OrderStatus.Filled;
+                }
+
+                CurrencyPairUtil.DecomposeCurrencyPair(leanOrder.Symbol, out _, out var quoteCurrency);
+
+                var orderEvent = new OrderEvent(
+                    leanOrder.Id,
+                    leanOrder.Symbol,
+                    eventTimestampUtc,
+                    leanOrderStatus,
+                    leanOrder.Direction,
+                    order.AveragePrice.Value,
+                    order.CumulativeQuantity.Value * Math.Sign(leanOrder.Quantity),
+                     new OrderFee(new CashAmount(order.TotalFees.Value, quoteCurrency))
+                    );
+
+                OnOrderEvent(orderEvent);
             }
         }
 

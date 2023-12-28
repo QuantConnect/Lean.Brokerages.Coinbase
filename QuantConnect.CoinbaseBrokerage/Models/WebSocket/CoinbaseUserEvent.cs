@@ -96,4 +96,19 @@ public class CoinbaseWebSocketOrderResponse
     /// </summary>
     [JsonProperty("order_type")]
     public string OrderType { get; set; }
+
+    /// <summary>
+    /// Cancel Reason
+    /// </summary>
+    /// <example>
+    /// "User requested cancel"
+    /// </example>
+    [JsonProperty("cancel_reason")]
+    public string CancelReason { get; set; }
+
+    /// <summary>
+    /// Reject Reason
+    /// </summary>
+    [JsonProperty("reject_Reason")]
+    public string RejectReason { get; set; }
 }
