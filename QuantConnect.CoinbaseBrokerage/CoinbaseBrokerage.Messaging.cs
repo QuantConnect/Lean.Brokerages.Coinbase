@@ -118,7 +118,8 @@ namespace QuantConnect.CoinbaseBrokerage
                 // https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-overview#sequence-numbers
                 if (newSequenceNumbers != 0 && newSequenceNumbers != _sequenceNumbers + 1)
                 {
-                    return;
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "SequenceNumbers",
+                        $"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: sequence number mismatch. If Sequence numbers are greater that a message has been dropped else ones are less can be ignored or represent a message that has arrived out of order."));
                 }
 
                 _sequenceNumbers = newSequenceNumbers;
