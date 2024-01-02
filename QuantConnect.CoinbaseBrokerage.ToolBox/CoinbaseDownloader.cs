@@ -102,7 +102,7 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
         {
             var apiKey = Config.Get("coinbase-api-key", "");
             var apiSecret = Config.Get("coinbase-api-secret", "");
-            var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
             return new CoinbaseBrokerage(string.Empty, apiKey, apiSecret, restApiUrl, null, null, null);
         }
     }

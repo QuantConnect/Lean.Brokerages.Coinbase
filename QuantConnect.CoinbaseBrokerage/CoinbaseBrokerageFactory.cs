@@ -41,9 +41,9 @@ namespace QuantConnect.CoinbaseBrokerage
             { "coinbase-api-key", Config.Get("coinbase-api-key")},
             { "coinbase-api-secret", Config.Get("coinbase-api-secret")},
             // Represents the configuration setting for the Coinbase API URL.
-            { "coinbase-api-url", Config.Get("coinbase-api-url", "https://api.coinbase.com")},
+            { "coinbase-rest-api", Config.Get("coinbase-rest-api", "https://api.coinbase.com")},
             // Represents the configuration setting for the Coinbase WebSocket URL.
-            { "coinbase-websocket-url" , Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com")},
+            { "coinbase-url" , Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com")},
             // load holdings if available
             { "live-holdings", Config.Get("live-holdings")},
         };
@@ -72,8 +72,8 @@ namespace QuantConnect.CoinbaseBrokerage
             var errors = new List<string>();
             var apiKey = Read<string>(job.BrokerageData, "coinbase-api-key", errors);
             var apiSecret = Read<string>(job.BrokerageData, "coinbase-api-secret", errors);
-            var apiUrl = Read<string>(job.BrokerageData, "coinbase-api-url", errors);
-            var wsUrl = Read<string>(job.BrokerageData, "coinbase-websocket-url", errors);
+            var apiUrl = Read<string>(job.BrokerageData, "coinbase-rest-api", errors);
+            var wsUrl = Read<string>(job.BrokerageData, "coinbase-url", errors);
 
             if (errors.Count != 0)
             {

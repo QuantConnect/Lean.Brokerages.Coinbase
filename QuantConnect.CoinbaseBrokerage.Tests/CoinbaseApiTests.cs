@@ -173,7 +173,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         {
             var apiKey = Config.Get("coinbase-api-key");
             var apiKeySecret = Config.Get("coinbase-api-secret");
-            var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
             var request = new RestRequest($"{uriPath}", Method.POST);
 
@@ -202,7 +202,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
         private CoinbaseApi CreateCoinbaseApi(string apiKey, string apiKeySecret)
         {
-            var restApiUrl = Config.Get("coinbase-api-url", "https://api.coinbase.com");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
             return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX), null, apiKey, apiKeySecret, restApiUrl);
         }

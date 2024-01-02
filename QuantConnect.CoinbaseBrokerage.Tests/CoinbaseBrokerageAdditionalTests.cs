@@ -31,20 +31,20 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     [TestFixture]
     public class CoinbaseBrokerageAdditionalTests
     {
-        [Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
+        //[Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
         [TestCase(5)]
         public void BrokerageConnectionAndReconnectionTest(int amountAttempt)
         {
             int counter = 0;
             var cancellationTokenSource = new CancellationTokenSource();
+            var resetEvent = new AutoResetEvent(false);
+
             using (var brokerage = GetBrokerage())  
             {
-                var hasError = false;
-
                 brokerage.Message += (_, brokerageMessageEvent) => {
                     Log.Debug("");
                     Log.Debug($"Brokerage:Error: {brokerageMessageEvent.Message}");
-                    hasError = true; 
+                    resetEvent.Set();
                 };
 
                 do
@@ -55,9 +55,9 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                     Assert.IsTrue(brokerage.IsConnected);
 
                     // cool down 
-                    cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(10));
+                    Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(60), cancellationTokenSource.Token));
 
-                    Assert.IsFalse(hasError);
+                    //Assert.IsFalse(hasError);
 
                     Log.Debug("");
                     Log.Debug($"BrokerageConnectionAndReconnectionTest: disconnect attempt: #{counter}");
@@ -65,7 +65,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                     Assert.IsFalse(brokerage.IsConnected);
 
                     // cool down 
-                    cancellationTokenSource.Token.WaitHandle.WaitOne(TimeSpan.FromSeconds(5));
+                    resetEvent.WaitOne(TimeSpan.FromSeconds(10), cancellationTokenSource.Token);
 
                 } while (++counter < amountAttempt);
             }
@@ -107,10 +107,10 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
 
         private static TestCoinbaseDataQueueHandler GetBrokerage()
         {
-            var wssUrl = Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com");
+            var wssUrl = Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com");
             var apiKey = Config.Get("coinbase-api-key");
             var apiSecret = Config.Get("coinbase-api-secret");
-            var restApiUrl = Config.Get("coinbase-api-url");
+            var restApiUrl = Config.Get("coinbase-rest-api");
             var algorithm = new QCAlgorithm();
             var aggregator = new AggregationManager();
 

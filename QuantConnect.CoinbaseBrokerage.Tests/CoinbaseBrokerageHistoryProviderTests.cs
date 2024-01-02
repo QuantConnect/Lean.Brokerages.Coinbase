@@ -37,8 +37,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             var aggregator = new AggregationManager();
 
             var brokerage = new CoinbaseBrokerage(
-                Config.Get("coinbase-websocket-url", "wss://advanced-trade-ws.coinbase.com"),
-                Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-api-url"), null, aggregator, null);
+                Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com"),
+                Config.Get("coinbase-api-key"), Config.Get("coinbase-api-secret"), Config.Get("coinbase-url"), null, aggregator, null);
 
             var historyProvider = new BrokerageHistoryProvider();
             historyProvider.SetBrokerage(brokerage);

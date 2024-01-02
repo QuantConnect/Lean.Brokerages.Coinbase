@@ -75,10 +75,10 @@ namespace QuantConnect.CoinbaseBrokerage
                 Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
 
             Initialize(
-                webSocketUrl: job.BrokerageData["coinbase-websocket-url"],
+                webSocketUrl: job.BrokerageData["coinbase-url"],
                 apiKey: job.BrokerageData["coinbase-api-key"],
                 apiSecret: job.BrokerageData["coinbase-api-secret"],
-                restApiUrl: job.BrokerageData["coinbase-api-url"],
+                restApiUrl: job.BrokerageData["coinbase-rest-api"],
                 algorithm: null,
                 orderProvider: null,
                 aggregator: aggregator,
