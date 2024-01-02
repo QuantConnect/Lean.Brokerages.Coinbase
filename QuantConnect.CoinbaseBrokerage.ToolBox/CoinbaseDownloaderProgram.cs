@@ -47,7 +47,7 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                 var dataDirectory = Globals.DataFolder;
                 //todo: will download any exchange but always save as coinbase
                 // Create an instance of the downloader
-                const string market = Market.GDAX;
+                const string market = Market.Coinbase;
                 var downloader = new CoinbaseDownloader();
                 foreach (var ticker in tickers)
                 {

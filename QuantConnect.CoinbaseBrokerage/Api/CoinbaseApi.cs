@@ -215,6 +215,19 @@ public class CoinbaseApi : IDisposable
     }
 
     /// <summary>
+    /// Get a list of the available currency pairs for trading.
+    /// </summary>
+    /// <returns>>An enumerable <see cref="CoinbaseProduct"/> collection.</returns>
+    public IEnumerable<CoinbaseProduct> GetProducts()
+    {
+        var request = new RestRequest($"{_apiPrefix}/brokerage/products", Method.GET);
+
+        var response = _apiClient.ExecuteRequest(request);
+
+        return JsonConvert.DeserializeObject<CoinbaseProductResponse>(response.Content).Products;
+    }
+
+    /// <summary>
     /// Edits an existing limit order on Coinbase brokerage.
     /// </summary>
     /// <param name="leanOrder">The limit order to be edited.</param>
