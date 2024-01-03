@@ -40,8 +40,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 yield return new TestCaseData(BTCUSDC, Resolution.Tick);
                 yield return new TestCaseData(BTCUSDC, Resolution.Second);
                 yield return new TestCaseData(BTCUSDC, Resolution.Minute);
-                yield return new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.GDAX), Resolution.Minute);
-                yield return new TestCaseData(Symbol.Create("GRTUSD", SecurityType.Crypto, Market.GDAX), Resolution.Second);
+                yield return new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Coinbase), Resolution.Minute);
+                yield return new TestCaseData(Symbol.Create("GRTUSD", SecurityType.Crypto, Market.Coinbase), Resolution.Second);
             }
         }
 

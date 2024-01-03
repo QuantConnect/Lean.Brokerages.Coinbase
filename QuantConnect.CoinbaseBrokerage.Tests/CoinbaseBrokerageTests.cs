@@ -34,9 +34,9 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     public partial class CoinbaseBrokerageTests : BrokerageTests
     {
         #region Properties
-        protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX);
+        protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
 
-        protected virtual ISymbolMapper SymbolMapper => new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX);
+        protected virtual ISymbolMapper SymbolMapper => new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase);
 
         protected CoinbaseApi _api;
 
@@ -108,8 +108,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         // no stop limit support
         private static TestCaseData[] OrderParameters => new[]
         {
-            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX))),
-            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.GDAX), 305m, 300m)),
+            new TestCaseData(new MarketOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase))),
+            new TestCaseData(new LimitOrderTestParameters(Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase), 305m, 300m)),
         };
 
         [Test, TestCaseSource(nameof(OrderParameters))]
