@@ -153,8 +153,6 @@ namespace QuantConnect.CoinbaseBrokerage
 
             Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
 
-            WebSocket.Open += SubscribeOnWebSocketFeed;
-
             _job = job;
             _algorithm = algorithm;
             _aggregator = aggregator;
@@ -164,7 +162,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
             SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()
             {
-                SubscribeImpl = (symbols, _) => Subscribe(symbols),
+                SubscribeImpl = (symbols, _) => SubscribeSymbolsOnDataChannels(symbols.ToList()),
                 UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
 
@@ -257,12 +255,9 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         public override void Connect()
         {
-            // token may be canceled anywhere then we need reset one
-            if (_cancellationTokenSource.Token.IsCancellationRequested && !_cancellationTokenSource.TryReset())
-            {
-                _cancellationTokenSource.DisposeSafely();
-                _cancellationTokenSource = new();
-            }
+            if (IsConnected)
+                return;
+
             base.Connect();
         }
 

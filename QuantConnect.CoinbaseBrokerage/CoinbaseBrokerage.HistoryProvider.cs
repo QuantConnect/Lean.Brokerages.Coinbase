@@ -80,6 +80,8 @@ namespace QuantConnect.CoinbaseBrokerage
                 yield break;
             }
 
+            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}: Submitting request: {request.Symbol.Value}: {request.Resolution} {request.StartTimeUtc} UTC -> {request.EndTimeUtc} UTC");
+
             foreach (var tradeBar in GetHistoryFromCandles(request))
             {
                 yield return tradeBar;

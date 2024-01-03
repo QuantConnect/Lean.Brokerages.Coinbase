@@ -64,29 +64,17 @@ namespace QuantConnect.CoinbaseBrokerage
         private CancellationTokenSource _cancellationTokenSource = new();
 
         /// <summary>
+        /// Private CancellationTokenSource for managing the cancellation of resubscription operations in a WebSocket context.
+        /// </summary>
+        /// <remarks>
+        /// This CancellationTokenSource is used specifically during the handling of the WebSocket open event to manage the resubscription process.
+        /// </remarks>
+        private CancellationTokenSource _cancellationTokenSourceReSubscription;
+
+        /// <summary>
         /// Use like synchronization context for threads
         /// </summary>
         private readonly object _synchronizationContext = new object();
-
-        private void SubscribeOnWebSocketFeed(object _, EventArgs __)
-        {
-            // launch a task so we don't block WebSocket and can send and receive
-            Task.Factory.StartNew(() =>
-            {
-                Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
-                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
-
-                // TODO: not working properly: https://forums.coinbasecloud.dev/t/type-error-message-failure-to-subscribe/5689
-                _webSocketSubscriptionOnUserUpdateResetEvent.Reset();
-                Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
-                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
-
-                if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
-                {
-                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe on `user update` channels"));
-                }
-            }, _cancellationTokenSource.Token);
-        }
 
         /// <summary>
         /// Wss message handler
@@ -109,7 +97,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 if (channel == null)
                 {
                     Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}.ERROR: {data.Message}");
-                    _cancellationTokenSource.Cancel();
                     return;
                 }
 
@@ -358,8 +345,37 @@ namespace QuantConnect.CoinbaseBrokerage
         /// </summary>
         protected override bool Subscribe(IEnumerable<Symbol> symbols)
         {
-            SubscribeSymbolsOnDataChannels(symbols.ToList());
+            try
+            {
+                // cancel any previous subscription task, this can happen if the WS closes and reopens right away for some reason
+                _cancellationTokenSourceReSubscription?.Cancel();
+                _cancellationTokenSourceReSubscription.DisposeSafely();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(Subscribe)}.{nameof(_cancellationTokenSourceReSubscription)}:ERROR: {ex.Message}");
+            }
+            _cancellationTokenSourceReSubscription = new();
 
+            // launch a task so we don't block WebSocket and can send and receive
+            Task.Factory.StartNew(() =>
+            {
+                Log.Debug($"{nameof(CoinbaseBrokerage)}:Open on Heartbeats channel");
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats);
+
+                // TODO: not working properly: https://forums.coinbasecloud.dev/t/type-error-message-failure-to-subscribe/5689
+                _webSocketSubscriptionOnUserUpdateResetEvent.Reset();
+                Log.Debug($"{nameof(CoinbaseBrokerage)}:Connect: on User channel");
+                ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.User);
+
+                if (!_webSocketSubscriptionOnUserUpdateResetEvent.WaitOne(TimeSpan.FromSeconds(30), _cancellationTokenSource.Token))
+                {
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe on `user update` channels"));
+                }
+
+                SubscribeSymbolsOnDataChannels(GetSubscribed().ToList());
+            }, _cancellationTokenSourceReSubscription.Token);
+            
             return true;
         }
 
@@ -383,19 +399,24 @@ namespace QuantConnect.CoinbaseBrokerage
         /// invoking the <see cref="ManageChannelSubscription"/> method with the appropriate parameters.
         /// </remarks>
         /// <seealso cref="ManageChannelSubscription"/>
-        private void SubscribeSymbolsOnDataChannels(List<Symbol> symbols, WebSocketSubscriptionType subscriptionType = WebSocketSubscriptionType.Subscribe)
+        private bool SubscribeSymbolsOnDataChannels(List<Symbol> symbols, WebSocketSubscriptionType subscriptionType = WebSocketSubscriptionType.Subscribe)
         {
             var products = symbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
 
             if (products.Count == 0)
             {
-                return;
+                return false;
             }
 
             foreach (var channel in CoinbaseWebSocketChannels.WebSocketChannelList)
             {
-                ManageChannelSubscription(subscriptionType, channel, products);
+                foreach (var chunkProduct in products.Chunk(20))
+                {
+                    ManageChannelSubscription(subscriptionType, channel, chunkProduct.ToList());
+                }
             }
+
+            return true;
         }
 
         /// <summary>
