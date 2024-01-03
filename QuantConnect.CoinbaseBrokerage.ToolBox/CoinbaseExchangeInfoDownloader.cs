@@ -46,12 +46,6 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
 
             foreach (var product in products)
             {
-                // skip delisted products (status == "delisted")
-                if (product.Status.Contains("delisted", System.StringComparison.InvariantCultureIgnoreCase))
-                {
-                    continue;
-                }
-
                 var symbol = product.ProductId.Replace("-", string.Empty);
                 var description = $"{product.BaseName}-{product.QuoteName}";
                 var quoteCurrency = product.QuoteCurrencyId;
