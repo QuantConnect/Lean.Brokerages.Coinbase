@@ -34,7 +34,6 @@ using QuantConnect.Orders.Fees;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
 using System.Security.Cryptography;
-using System.Collections.Concurrent;
 using System.Net.NetworkInformation;
 using QuantConnect.CoinbaseBrokerage.Api;
 using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
@@ -85,8 +84,7 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <summary>
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with the specified name.
         /// </summary>
-        /// <param name="name">The name associated with the Coinbase brokerage instance.</param>
-        public CoinbaseBrokerage(string name) : base(name)
+        public CoinbaseBrokerage() : base(MarketName)
         { }
 
         /// <summary>
