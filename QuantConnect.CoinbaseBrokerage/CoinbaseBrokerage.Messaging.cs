@@ -40,7 +40,18 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <summary>
         /// Represents a collection of order books associated with symbols in a thread-safe manner.
         /// </summary>
-        private readonly ConcurrentDictionary<Symbol, DefaultOrderBook> _orderBooks = new();
+        /// <remarks>We use List cuz brokerage doesn't return update for USDC ticker</remarks>
+        /// <example>
+        /// The structure of the collection is as follows:
+        /// <code>
+        /// <![CDATA[
+        /// Key: BTCUSD
+        /// Value: List containing DefaultOrderBook instances, e.g., { BTCUSD, BTCUSDC }
+        /// ]]>
+        /// </code>
+        /// This example demonstrates how the order books are associated with the BTCUSD symbol.
+        /// </example>
+        private readonly ConcurrentDictionary<Symbol, List<DefaultOrderBook>> _orderBooks = new();
 
         /// <summary>
         /// Represents a rate limiter for controlling the frequency of WebSocket operations.
@@ -216,18 +227,34 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var symbol = _symbolMapper.GetLeanSymbol(snapshotData.ProductId, SecurityType.Crypto, MarketName);
 
-            DefaultOrderBook orderBook;
-            if (!_orderBooks.TryGetValue(symbol, out orderBook))
+            List<DefaultOrderBook> orderBooks;
+            if (!_orderBooks.TryGetValue(symbol, out orderBooks))
             {
-                orderBook = new DefaultOrderBook(symbol);
-                _orderBooks[symbol] = orderBook;
+                orderBooks = new List<DefaultOrderBook>()
+                {
+                    new DefaultOrderBook(symbol)
+                };
+
+                // create orderBook for USDC symbol too
+                if (snapshotData.ProductId.EndsWithInvariant("USD"))
+                {
+                    var symbolUSDC = GetSimilarSymbolUSDC(snapshotData.ProductId);
+                    orderBooks.Add(new DefaultOrderBook(symbolUSDC));
+                }
+
+                _orderBooks[symbol] = orderBooks;
             }
             else
             {
+                foreach (var orderBook in orderBooks)
+                {
                 orderBook.BestBidAskUpdated -= OnBestBidAskUpdated;
                 orderBook.Clear();
             }
+            }
 
+            foreach (var orderBook in orderBooks)
+            {
             foreach (var update in snapshotData.Updates)
             {
                 if (update.Side == CoinbaseLevel2UpdateSide.Bid)
@@ -246,6 +273,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
             EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
         }
+        }
 
         private void OnBestBidAskUpdated(object sender, BestBidAskUpdatedEventArgs e)
         {
@@ -256,12 +284,14 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             var leanSymbol = _symbolMapper.GetLeanSymbol(updateData.ProductId, SecurityType.Crypto, MarketName);
 
-            if (!_orderBooks.TryGetValue(leanSymbol, out var orderBook))
+            if (!_orderBooks.TryGetValue(leanSymbol, out var orderBooks))
             {
                 Log.Error($"Attempting to update a non existent order book for {leanSymbol}");
                 return;
             }
 
+            foreach (var orderBook in orderBooks)
+            {
             foreach (var update in updateData.Updates)
             {
                 switch (update.Side)
@@ -289,6 +319,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 }
             }
         }
+        }
 
         private void EmitTradeTick(CoinbaseMarketTradesEvent tradeUpdates)
         {
@@ -309,6 +340,17 @@ namespace QuantConnect.CoinbaseBrokerage
                 {
                     _aggregator.Update(tick);
                 }
+
+                if (trade.ProductId.EndsWithInvariant("USD"))
+                {
+                    var symbolUSDC = GetSimilarSymbolUSDC(trade.ProductId);
+                    tick.Symbol = symbolUSDC;
+
+                    lock (_synchronizationContext)
+                    {
+                        _aggregator.Update(tick); 
+            }
+        }
             }
         }
 
@@ -449,6 +491,23 @@ namespace QuantConnect.CoinbaseBrokerage
             _webSocketRateLimit.WaitToProceed();
 
             WebSocket.Send(json);
+        }
+
+        /// <summary>
+        /// Retrieves a similar symbol associated with USDC (USD Coin) based on the provided product ID.
+        /// </summary>
+        /// <param name="productIdUSD">The product ID for the USD trading pair.</param>
+        /// <returns>
+        /// A Symbol object representing a similar symbol paired with USDC, derived from the provided product ID.
+        /// </returns>
+        /// <remarks>
+        /// This method utilizes the SymbolMapper to convert the given product ID into a Lean Symbol with the specified parameters.
+        /// It assumes the product ID follows the format "{BaseCurrency}-{QuoteCurrency}" and appends "-USDC" to create the similar symbol.
+        /// The SecurityType is set to Crypto, and the MarketName is used during symbol mapping.
+        /// </remarks>
+        private Symbol GetSimilarSymbolUSDC(string productIdUSD)
+        {
+            return _symbolMapper.GetLeanSymbol(productIdUSD.Split('-')[0] + "-USDC", SecurityType.Crypto, MarketName);
         }
     }
 }
