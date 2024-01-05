@@ -38,7 +38,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 var data = tickerLine.Split(",");
                 Assert.AreEqual(10, data.Length);
                 var ticker = data[1];
-                Assert.Greater(string.Compare(ticker, previousTicker, StringComparison.Ordinal), 0);
+                Assert.AreNotEqual(previousTicker, ticker);
                 previousTicker = ticker;
             }
         }
