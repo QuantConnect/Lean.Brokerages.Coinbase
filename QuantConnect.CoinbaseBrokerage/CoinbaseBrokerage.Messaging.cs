@@ -250,31 +250,31 @@ namespace QuantConnect.CoinbaseBrokerage
             {
                 foreach (var orderBook in orderBooks)
                 {
-                orderBook.BestBidAskUpdated -= OnBestBidAskUpdated;
-                orderBook.Clear();
-            }
+                    orderBook.BestBidAskUpdated -= OnBestBidAskUpdated;
+                    orderBook.Clear();
+                }
             }
 
             foreach (var orderBook in orderBooks)
             {
-            foreach (var update in snapshotData.Updates)
-            {
-                if (update.Side == CoinbaseLevel2UpdateSide.Bid)
+                foreach (var update in snapshotData.Updates)
                 {
-                    orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
-                    continue;
+                    if (update.Side == CoinbaseLevel2UpdateSide.Bid)
+                    {
+                        orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                        continue;
+                    }
+
+                    if (update.Side == CoinbaseLevel2UpdateSide.Offer)
+                    {
+                        orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                    }
                 }
 
-                if (update.Side == CoinbaseLevel2UpdateSide.Offer)
-                {
-                    orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
-                }
-            }
-
-            orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
+                orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
 
                 EmitQuoteTick(orderBook.Symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
-        }
+            }
         }
 
         private void OnBestBidAskUpdated(object sender, BestBidAskUpdatedEventArgs e)
@@ -294,33 +294,33 @@ namespace QuantConnect.CoinbaseBrokerage
 
             foreach (var orderBook in orderBooks)
             {
-            foreach (var update in updateData.Updates)
-            {
-                switch (update.Side)
+                foreach (var update in updateData.Updates)
                 {
-                    case CoinbaseLevel2UpdateSide.Bid:
-                        if (update.NewQuantity.Value == 0)
-                        {
-                            orderBook.RemoveBidRow(update.PriceLevel.Value);
-                        }
-                        else
-                        {
-                            orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
-                        }
-                        continue;
-                    case CoinbaseLevel2UpdateSide.Offer:
-                        if (update.NewQuantity.Value == 0)
-                        {
-                            orderBook.RemoveAskRow(update.PriceLevel.Value);
-                        }
-                        else
-                        {
-                            orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
-                        }
-                        continue;
+                    switch (update.Side)
+                    {
+                        case CoinbaseLevel2UpdateSide.Bid:
+                            if (update.NewQuantity.Value == 0)
+                            {
+                                orderBook.RemoveBidRow(update.PriceLevel.Value);
+                            }
+                            else
+                            {
+                                orderBook.UpdateBidRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                            }
+                            continue;
+                        case CoinbaseLevel2UpdateSide.Offer:
+                            if (update.NewQuantity.Value == 0)
+                            {
+                                orderBook.RemoveAskRow(update.PriceLevel.Value);
+                            }
+                            else
+                            {
+                                orderBook.UpdateAskRow(update.PriceLevel.Value, update.NewQuantity.Value);
+                            }
+                            continue;
+                    }
                 }
             }
-        }
         }
 
         private void EmitTradeTick(CoinbaseMarketTradesEvent tradeUpdates)
@@ -355,8 +355,8 @@ namespace QuantConnect.CoinbaseBrokerage
                     lock (_synchronizationContext)
                     {
                         _aggregator.Update(clone);
-            }
-        }
+                    }
+                }
             }
         }
 
@@ -423,7 +423,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 SubscribeSymbolsOnDataChannels(GetSubscribed().ToList());
             }, _cancellationTokenSourceReSubscription.Token);
-            
+
             return true;
         }
 
