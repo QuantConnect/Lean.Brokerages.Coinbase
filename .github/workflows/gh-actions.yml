@@ -8,11 +8,10 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     env:
-        QC_GDAX_API_SECRET: ${{ secrets.QC_GDAX_API_SECRET }}
-        QC_GDAX_API_KEY: ${{ secrets.QC_GDAX_API_KEY }}
-        QC_GDAX_PASSPHRASE: ${{ secrets.QC_GDAX_PASSPHRASE }}
-        QC_GDAX_URL: ${{ secrets.QC_GDAX_URL }}
-        QC_GDAX_REST_API: ${{ secrets.QC_GDAX_REST_API }}
+        QC_COINBASE_API_SECRET: ${{ secrets.QC_COINBASE_API_SECRET }}
+        QC_COINBASE_API_KEY: ${{ secrets.QC_COINBASE_API_KEY }}
+        QC_COINBASE_URL: ${{ secrets.QC_COINBASE_URL }}
+        QC_COINBASE_REST_API: ${{ secrets.QC_COINBASE_REST_API }}
         QC_JOB_USER_ID: ${{ secrets.JOB_USER_ID }}
         QC_API_ACCESS_TOKEN: ${{ secrets.API_ACCESS_TOKEN }}
         QC_JOB_ORGANIZATION_ID: ${{ secrets.JOB_ORGANIZATION_ID }}
@@ -41,7 +40,7 @@ jobs:
         run: mv Lean ../Lean
 
       - name: Build
-        run: dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.GDAXBrokerage.sln
+        run: dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.CoinbaseBrokerage.sln
 
       - name: Run Tests
-        run: dotnet test ./QuantConnect.GDAXBrokerage.Tests/bin/Release/QuantConnect.GDAXBrokerage.Tests.dll
+        run: dotnet test ./QuantConnect.CoinbaseBrokerage.Tests/bin/Release/QuantConnect.CoinbaseBrokerage.Tests.dll

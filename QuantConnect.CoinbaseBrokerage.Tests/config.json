@@ -1,0 +1,7 @@
+{
+  "data-folder": "../../../../Lean/Data/",
+  "coinbase-rest-api": "https://api.coinbase.com",
+  "coinbase-url": "wss://advanced-trade-ws.coinbase.com",
+  "coinbase-api-key": "",
+  "coinbase-api-secret": ""
+}
