@@ -26,7 +26,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     [TestFixture]
     public class CoinbaseBrokerageAdditionalTests
     {
-        [Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
+        [Explicit("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
         [TestCase(5)]
         public void BrokerageConnectionAndReconnectionTest(int amountAttempt)
         {

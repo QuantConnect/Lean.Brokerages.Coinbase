@@ -235,8 +235,10 @@ namespace QuantConnect.CoinbaseBrokerage
                     new DefaultOrderBook(symbol)
                 };
 
-                // create orderBook for USDC symbol too
-                if (snapshotData.ProductId.EndsWithInvariant("USD"))
+                // Create orderBook for USDC symbol too
+                // The Brokerage returns always data of [BTC-USD] even if user has subscribed on [BTC-USDC] explicitly
+                // We need handle USDC pair too. USDC has the same data like USD.
+                if (snapshotData.ProductId.EndsWithInvariant("-USD"))
                 {
                     var symbolUSDC = GetSimilarSymbolUSDC(snapshotData.ProductId);
                     orderBooks.Add(new DefaultOrderBook(symbolUSDC));
@@ -271,7 +273,7 @@ namespace QuantConnect.CoinbaseBrokerage
 
             orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
 
-            EmitQuoteTick(symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
+                EmitQuoteTick(orderBook.Symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
         }
         }
 
@@ -341,14 +343,18 @@ namespace QuantConnect.CoinbaseBrokerage
                     _aggregator.Update(tick);
                 }
 
-                if (trade.ProductId.EndsWithInvariant("USD"))
+                // Create Trade Tick for USDC symbol too
+                // The Brokerage returns always data of [BTC-USD] even if user has subscribed on [BTC-USDC] explicitly
+                // We need handle USDC pair too. USDC has the same data like USD.
+                if (trade.ProductId.EndsWithInvariant("-USD"))
                 {
                     var symbolUSDC = GetSimilarSymbolUSDC(trade.ProductId);
-                    tick.Symbol = symbolUSDC;
+                    var clone = tick.Clone(fillForward: false);
+                    clone.Symbol = symbolUSDC;
 
                     lock (_synchronizationContext)
                     {
-                        _aggregator.Update(tick); 
+                        _aggregator.Update(clone);
             }
         }
             }
