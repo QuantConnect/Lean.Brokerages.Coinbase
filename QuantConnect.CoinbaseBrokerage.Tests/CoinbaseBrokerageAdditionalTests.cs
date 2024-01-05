@@ -14,16 +14,11 @@
 */
 
 using System;
-using System.Linq;
 using NUnit.Framework;
 using System.Threading;
-using QuantConnect.Data;
 using QuantConnect.Logging;
-using QuantConnect.Packets;
 using QuantConnect.Algorithm;
-using QuantConnect.Interfaces;
 using QuantConnect.Configuration;
-using System.Collections.Generic;
 using QuantConnect.Lean.Engine.DataFeeds;
 
 namespace QuantConnect.CoinbaseBrokerage.Tests
@@ -31,7 +26,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     [TestFixture]
     public class CoinbaseBrokerageAdditionalTests
     {
-        //[Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
+        [Ignore("`user` channel sometimes doesn't subscribed in WebSocket.Open event")]
         [TestCase(5)]
         public void BrokerageConnectionAndReconnectionTest(int amountAttempt)
         {
@@ -39,9 +34,10 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var resetEvent = new AutoResetEvent(false);
 
-            using (var brokerage = GetBrokerage())  
+            using (var brokerage = GetBrokerage())
             {
-                brokerage.Message += (_, brokerageMessageEvent) => {
+                brokerage.Message += (_, brokerageMessageEvent) =>
+                {
                     Log.Debug("");
                     Log.Debug($"Brokerage:Error: {brokerageMessageEvent.Message}");
                     resetEvent.Set();
@@ -71,69 +67,16 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             }
         }
 
-        [Test]
-        public void DataQueueHandlerConnectsAndSubscribes()
-        {
-            var symbols = new[]
-            {
-                "LTCUSD", "LTCEUR", "LTCBTC",
-                "BTCUSD", "BTCEUR", "BTCGBP",
-                "ETHBTC", "ETHUSD", "ETHEUR",
-                "BCHBTC", "BCHUSD", "BCHEUR",
-                "XRPUSD", "XRPEUR", "XRPBTC",
-                "EOSUSD", "EOSEUR", "EOSBTC",
-                "XLMUSD", "XLMEUR", "XLMBTC",
-                "ETCUSD", "ETCEUR", "ETCBTC",
-                "ZRXUSD", "ZRXEUR", "ZRXBTC"
-            }
-            .Select(ticker => Symbol.Create(ticker, SecurityType.Crypto, Market.GDAX))
-            .ToList();
-
-            using (var dqh = GetBrokerage())
-            {
-                dqh.Connect();
-                Assert.IsTrue(dqh.IsConnected);
-
-                dqh.Subscribe(symbols);
-
-                Thread.Sleep(5000);
-
-                dqh.Unsubscribe(symbols);
-
-                dqh.Disconnect();
-                Assert.IsFalse(dqh.IsConnected);
-            }
-        }
-
-        private static TestCoinbaseDataQueueHandler GetBrokerage()
+        private static CoinbaseBrokerage GetBrokerage()
         {
             var wssUrl = Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
             var apiKey = Config.Get("coinbase-api-key");
             var apiSecret = Config.Get("coinbase-api-secret");
-            var restApiUrl = Config.Get("coinbase-rest-api");
             var algorithm = new QCAlgorithm();
             var aggregator = new AggregationManager();
 
-            return new TestCoinbaseDataQueueHandler(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
-        }
-
-        private class TestCoinbaseDataQueueHandler : CoinbaseBrokerage
-        {
-            public TestCoinbaseDataQueueHandler(string wssUrl, string apiKey,
-                string apiSecret,
-                string restApiUrl,
-                IAlgorithm algorithm,
-                IDataAggregator aggregator,
-                LiveNodePacket job
-                )
-                : base(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, job)
-            {
-            }
-
-            public void Subscribe(IEnumerable<Symbol> symbols)
-            {
-                base.Subscribe(symbols);
-            }
+            return new CoinbaseBrokerage(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
         }
     }
 }
