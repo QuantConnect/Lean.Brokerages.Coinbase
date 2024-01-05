@@ -14,10 +14,12 @@
 */
 
 using System;
+using System.Linq;
 using NUnit.Framework;
 using System.Threading;
 using QuantConnect.Data;
 using QuantConnect.Logging;
+using Microsoft.CodeAnalysis;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 
@@ -239,6 +241,78 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
             Thread.Sleep(2000);
 
             cancelationToken.Cancel();
+        }
+
+        private static IEnumerable<IEnumerable<Symbol>> BitcoinTradingPairs
+        {
+            get
+            {
+                yield return new List<Symbol>
+                {
+                    Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Coinbase),
+                    Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase),
+                    Symbol.Create("BTCUSDT", SecurityType.Crypto, Market.Coinbase)
+                };
+            }
+        }
+
+        [TestCaseSource(nameof(BitcoinTradingPairs))]
+        public void SubscribeOnDifferentUSDTickers(List<Symbol> symbols)
+        {
+            var resetEvent = new ManualResetEvent(false);
+            var cancelationTokenSource = new CancellationTokenSource();
+
+            var configs = new List<SubscriptionDataConfig>();
+
+            var dataReceivedForType = new Dictionary<(Type, Symbol), int>();
+
+            foreach (var symbol in symbols)
+            {
+                configs.Add(GetSubscriptionDataConfig<QuoteBar>(symbol, Resolution.Second));
+                configs.Add(GetSubscriptionDataConfig<TradeBar>(symbol, Resolution.Second));
+
+                dataReceivedForType.Add((typeof(QuoteBar), symbol), 0);
+                dataReceivedForType.Add((typeof(TradeBar), symbol), 0);
+            }
+
+            foreach (var config in configs)
+            {
+                ProcessFeed(_brokerage.Subscribe(config, (s, e) => { }),
+                cancelationTokenSource,
+                (tick) =>
+                {
+                    if (tick != null)
+                    {
+                        Log.Debug($"Tick: {tick}");
+
+                        if (tick is TradeBar tb)
+                        {
+                            dataReceivedForType[(tb.GetType(), tb.Symbol)] += 1;
+                        }
+
+                        if (tick is QuoteBar qb)
+                        {
+                            dataReceivedForType[(qb.GetType(), qb.Symbol)] += 1;
+                        }
+
+                        if (dataReceivedForType.Values.All(x => x > 0))
+                        {
+                            resetEvent.Set();
+                        }
+                    }
+                });
+            }
+
+            Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(30), cancelationTokenSource.Token));
+
+            foreach (var config in configs)
+            {
+                _brokerage.Unsubscribe(config);
+            }
+
+            Thread.Sleep(2000);
+
+            cancelationTokenSource.Cancel();
         }
     }
 }
