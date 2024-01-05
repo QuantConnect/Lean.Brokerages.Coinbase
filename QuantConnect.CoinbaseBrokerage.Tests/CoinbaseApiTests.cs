@@ -204,7 +204,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         {
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
-            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.GDAX), null, apiKey, apiKeySecret, restApiUrl);
+            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase), null, apiKey, apiKeySecret, restApiUrl);
         }
     }
 }

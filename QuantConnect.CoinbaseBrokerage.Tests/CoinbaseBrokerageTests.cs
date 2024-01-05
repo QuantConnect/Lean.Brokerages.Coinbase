@@ -157,7 +157,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         [TestCase("BTCUSDC")]
         public void GetTick(string ticker)
         {
-            var symbol = Symbol.Create(ticker, SecurityType.Crypto, Market.GDAX);
+            var symbol = Symbol.Create(ticker, SecurityType.Crypto, Market.Coinbase);
             var brokerageSymbol = SymbolMapper.GetBrokerageSymbol(symbol);
 
             var tick = _api.GetMarketTrades(brokerageSymbol);
