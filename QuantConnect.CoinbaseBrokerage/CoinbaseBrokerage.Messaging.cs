@@ -273,6 +273,11 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
 
+                if (orderBook.BestBidPrice == 0 && orderBook.BestAskPrice == 0)
+                {
+                    // nothing to emit, can happen with illiquid assets
+                    return;
+                }
                 EmitQuoteTick(orderBook.Symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
             }
         }
@@ -325,7 +330,10 @@ namespace QuantConnect.CoinbaseBrokerage
 
         private void EmitTradeTick(CoinbaseMarketTradesEvent tradeUpdates)
         {
-            foreach (var trade in tradeUpdates.Trades)
+            // coinbase sends older data, as an update, seems they send the last 100 trades, so let's filter it out
+            // also order by time since they return in descending time and we want ascending
+            var dataFrontier = DateTime.UtcNow - TimeSpan.FromMinutes(5);
+            foreach (var trade in tradeUpdates.Trades.Where(x => x.Time.UtcDateTime > dataFrontier).OrderBy(x => x.Time))
             {
                 var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, MarketName);
 
