@@ -29,7 +29,7 @@ public class CoinbaseMarketTradesEvent : WebSocketEvent
 public class Trade
 {
     [JsonProperty("trade_id")]
-    public string TradeId { get; set; }
+    public long TradeId { get; set; }
 
     [JsonProperty("product_id")]
     public string ProductId { get; set; }

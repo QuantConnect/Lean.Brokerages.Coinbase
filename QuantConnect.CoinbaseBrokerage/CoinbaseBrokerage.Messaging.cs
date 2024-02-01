@@ -54,6 +54,11 @@ namespace QuantConnect.CoinbaseBrokerage
         private readonly ConcurrentDictionary<Symbol, List<DefaultOrderBook>> _orderBooks = new();
 
         /// <summary>
+        /// Sometimes coinbase likes to duplicate the trades, let's ignore old trade ids
+        /// </summary>
+        private readonly ConcurrentDictionary<Symbol, Tuple<long, DateTime>> _tradeIds = new();
+
+        /// <summary>
         /// Represents a rate limiter for controlling the frequency of WebSocket operations.
         /// </summary>
         /// <see cref="https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-rate-limits"/>
@@ -273,6 +278,11 @@ namespace QuantConnect.CoinbaseBrokerage
 
                 orderBook.BestBidAskUpdated += OnBestBidAskUpdated;
 
+                if (orderBook.BestBidPrice == 0 && orderBook.BestAskPrice == 0)
+                {
+                    // nothing to emit, can happen with illiquid assets
+                    return;
+                }
                 EmitQuoteTick(orderBook.Symbol, orderBook.BestBidPrice, orderBook.BestBidSize, orderBook.BestAskPrice, orderBook.BestAskSize);
             }
         }
@@ -325,9 +335,20 @@ namespace QuantConnect.CoinbaseBrokerage
 
         private void EmitTradeTick(CoinbaseMarketTradesEvent tradeUpdates)
         {
-            foreach (var trade in tradeUpdates.Trades)
+            // coinbase sends older data, as an update, seems they send the last 100 trades, so let's filter it out
+            // also order by time since they return in descending time and we want ascending
+            var dataFrontier = DateTime.UtcNow - TimeSpan.FromMinutes(5);
+            foreach (var trade in tradeUpdates.Trades.Where(x => x.Time.UtcDateTime > dataFrontier).OrderBy(x => x.Time))
             {
                 var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, MarketName);
+
+                if (_tradeIds.TryGetValue(symbol, out var lastTradeData)
+                    // ignore old trade ids as long as they have an old timestamp too, just in case it restarted
+                    && lastTradeData.Item1 > trade.TradeId && lastTradeData.Item2 > trade.Time.UtcDateTime)
+                {
+                    continue;
+                }
+                _tradeIds[symbol] = new (trade.TradeId, trade.Time.UtcDateTime);
 
                 var tick = new Tick
                 {
