@@ -54,6 +54,11 @@ namespace QuantConnect.CoinbaseBrokerage
         private readonly ConcurrentDictionary<Symbol, List<DefaultOrderBook>> _orderBooks = new();
 
         /// <summary>
+        /// Sometimes coinbase likes to duplicate the trades, let's ignore old trade ids
+        /// </summary>
+        private readonly ConcurrentDictionary<Symbol, Tuple<long, DateTime>> _tradeIds = new();
+
+        /// <summary>
         /// Represents a rate limiter for controlling the frequency of WebSocket operations.
         /// </summary>
         /// <see cref="https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-rate-limits"/>
@@ -336,6 +341,14 @@ namespace QuantConnect.CoinbaseBrokerage
             foreach (var trade in tradeUpdates.Trades.Where(x => x.Time.UtcDateTime > dataFrontier).OrderBy(x => x.Time))
             {
                 var symbol = _symbolMapper.GetLeanSymbol(trade.ProductId, SecurityType.Crypto, MarketName);
+
+                if (_tradeIds.TryGetValue(symbol, out var lastTradeData)
+                    // ignore old trade ids as long as they have an old timestamp too, just in case it restarted
+                    && lastTradeData.Item1 > trade.TradeId && lastTradeData.Item2 > trade.Time.UtcDateTime)
+                {
+                    continue;
+                }
+                _tradeIds[symbol] = new (trade.TradeId, trade.Time.UtcDateTime);
 
                 var tick = new Tick
                 {
