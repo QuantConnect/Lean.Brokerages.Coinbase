@@ -82,14 +82,13 @@ Follow these steps to start local live trading with the Coinbase Pro brokerage:
     Use sandbox? (live, paper): live
     ```
 
-5.  Enter your API key, API secret, and passphrase.
+5.  Enter your API key, API secret.
 
     ``` 
     $ lean live "My Project"
 
     API key: 6d3ef5ca2d2fa52e4ee55624b0471261
     API secret: ****************************************************************************************
-    Passphrase: ****************
     ```
 
     To create new API credentials, see the [API settings page](https://pro.coinbase.com/profile/api) on the Coinbase Pro website.
@@ -136,7 +135,6 @@ Coinbase Pro supports trading crypto and the following order types:
 
 - Market Order
 - Limit Order
-- Stop Market Order
 - Stop-Limit Order
 
 
@@ -153,13 +151,13 @@ Lean models the brokerage behavior for backtesting purposes. The margin model is
 
 You can set the Brokerage Model with the following statements
 
-    SetBrokerageModel(BrokerageName.GDAX, AccountType.Cash);
+    SetBrokerageModel(BrokerageName.Coinbase, AccountType.Cash);
 
 [Read Documentation](https://www.quantconnect.com/docs/v2/our-platform/live-trading/brokerages/coinbase-pro)
 
 ### Fees
 
-We model the order fees of Coinbase Pro at the $50K-100K pricing tier for all Crypto pairs, which is a 0.5% maker and taker fee for most pairs. The following table shows the Coinbase Pro Stable Pairs, which charge a 0% maker fee and a 0.1% taker fee:
+We model the order fees of Coinbase Pro at the $50K-100K pricing tier for all Crypto pairs, which is a 0.60% maker and taker 0.80% fee for most pairs. The following table shows the Coinbase Pro Stable Pairs, which charge a 0% maker fee and a 0.001% taker fee:
 |||||
 |:----:|:----:|:----:|:----:|
 |DAIUSDC|DAIUSD|GYENUSD|PAXUSD|
@@ -174,7 +172,8 @@ We model the adjustments Coinbase Pro has made to their fees over time. The foll
 |----:|----:|----:|
 |Time < 3/23/2019 1:30AM|0|0.3|
 |3/23/2019 1:30AM <= Time < 10/8/2019 12:30AM|0.15|0.25|
-|10/8/2019 12:30AM <= Time|0.5|0.5|
+|10/8/2019 12:30AM <= Time < 12/21/2023 1:00 AM|0.5|0.5|
+|12/21/2023 1:00 AM <= Time|0.6|0.8|
 
 To check the latest fees at all the fee levels, see the [What are the fees on Coinbase Pro?](https://help.coinbase.com/en/pro/trading-and-funding/trading-rules-and-fees/fees) page on the Coinbase Pro website.
 

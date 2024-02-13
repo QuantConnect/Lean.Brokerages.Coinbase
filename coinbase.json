@@ -1,0 +1,17 @@
+{
+	"description": "Coinbase is a US-based cryptocurrency spot exchange. We are integrated with the Coinbase Advanced API which is in beta and has stability issues.",
+	
+	"platforms-features": [
+		{
+			"Platforms": ["Cloud Platform", "Local Platform", "LEAN CLI"],
+			"Download Data": [1,1,1],
+			"Backtesting": [1,1,1],
+			"Optimization": [1,1,1],
+			"Live Trading":	[1,1,1]
+		}
+	],
+	"order-types": [ "Market", "Limit", "Stop Market",  "Stop Limit" ],
+	"assets": [ "Crypto Spot" ], 
+	"brokerage-url": "https://www.coinbase.com/",
+	"documentation": "/docs/v2/cloud-platform/live-trading/brokerages/coinbase"
+}
