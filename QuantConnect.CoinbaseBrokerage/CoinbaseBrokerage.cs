@@ -149,6 +149,8 @@ namespace QuantConnect.CoinbaseBrokerage
                 return;
             }
 
+            ValidateSubscription();
+
             Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
 
             _job = job;
@@ -163,8 +165,6 @@ namespace QuantConnect.CoinbaseBrokerage
                 SubscribeImpl = (symbols, _) => SubscribeSymbolsOnDataChannels(symbols.ToList()),
                 UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
             };
-
-            ValidateSubscription();
         }
 
         #region IBrokerage
@@ -416,10 +416,10 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             try
             {
-                var productId = 183;
-                var userId = Config.GetInt("job-user-id");
-                var token = Config.Get("api-access-token");
-                var organizationId = Config.Get("job-organization-id", null);
+                const int productId = 183;
+                var userId = Globals.UserId;
+                var token = Globals.UserToken;
+                var organizationId = Globals.OrganizationID;
                 // Verify we can authenticate with this user and token
                 var api = new ApiConnection(userId, token);
                 if (!api.Connected)
