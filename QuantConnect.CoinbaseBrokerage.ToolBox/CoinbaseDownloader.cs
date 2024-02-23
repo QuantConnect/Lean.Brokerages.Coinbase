@@ -43,13 +43,8 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
             var endUtc = dataDownloaderGetParameters.EndUtc;
             var tickType = dataDownloaderGetParameters.TickType;
 
-            if (tickType != TickType.Trade)
-            {
-                return Enumerable.Empty<BaseData>();
-            }
-
-            var type = default(Type);
-            if(resolution == Resolution.Tick)
+            Type type;
+            if (resolution == Resolution.Tick)
             {
                 type = typeof(Tick);
             }

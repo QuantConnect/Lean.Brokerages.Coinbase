@@ -54,6 +54,10 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                     // Download the data
                     var symbolObject = Symbol.Create(ticker, SecurityType.Crypto, market);
                     var data = downloader.Get(new DataDownloaderGetParameters(symbolObject, castResolution, fromDate, toDate));
+                    if (data == null)
+                    {
+                        continue;
+                    }
 
                     // Save the data
                     var writer = new LeanDataWriter(castResolution, symbolObject, dataDirectory, TickType.Trade);
