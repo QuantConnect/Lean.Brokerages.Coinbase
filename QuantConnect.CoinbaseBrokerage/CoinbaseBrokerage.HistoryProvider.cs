@@ -20,7 +20,6 @@ using QuantConnect.Brokerages;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.CoinbaseBrokerage.Models.Enums;
-using System.Linq;
 
 namespace QuantConnect.CoinbaseBrokerage
 {
@@ -35,6 +34,7 @@ namespace QuantConnect.CoinbaseBrokerage
         private bool _loggedCoinbaseSupportsOnlyTradeBars;
         private bool _loggedUnsupportedAssetForHistory;
         private bool _loggedUnsupportedResolutionForHistory;
+        private bool _loggedInvalidTimeRangeForHistory;
 
         /// <summary>
         /// Gets the history for the requested security
@@ -78,9 +78,13 @@ namespace QuantConnect.CoinbaseBrokerage
 
             if (request.StartTimeUtc >= request.EndTimeUtc)
             {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidDateRange",
-                    "The history request start date must precede the end date, no history returned"));
-                return Enumerable.Empty<BaseData>();
+                if (!_loggedInvalidTimeRangeForHistory)
+                {
+                    _loggedInvalidTimeRangeForHistory = true;
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidDateRange",
+                        "The history request start date must precede the end date, no history returned"));
+                }
+                return null;
             }
 
             Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}: Submitting request: {request.Symbol.Value}: {request.Resolution} {request.StartTimeUtc} UTC -> {request.EndTimeUtc} UTC");

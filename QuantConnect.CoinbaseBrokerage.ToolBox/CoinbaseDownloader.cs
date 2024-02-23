@@ -72,8 +72,7 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                 tickType);
 
             var brokerage = CreateBrokerage();
-            var data = brokerage.GetHistory(historyRequest);
-            return data;
+            return brokerage.GetHistory(historyRequest);
         }
 
         /// <summary>

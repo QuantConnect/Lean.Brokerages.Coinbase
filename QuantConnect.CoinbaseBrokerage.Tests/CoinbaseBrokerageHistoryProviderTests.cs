@@ -32,7 +32,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     public class CoinbaseBrokerageHistoryProviderTests
     {
         [Test, TestCaseSource(nameof(TestParameters))]
-        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool shouldBeEmpty, bool unsupported)
+        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool unsupported)
         {
             var brokerage = new CoinbaseBrokerage(
                 Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com"),
@@ -65,12 +65,7 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 return;
             }
 
-            if (shouldBeEmpty)
-            {
-                Assert.IsEmpty(history);
-                return;
-            }
-
+            Assert.IsNotNull(history);
             Assert.IsNotEmpty(history);
 
             foreach (var bar in history.Cast<TradeBar>())
@@ -90,33 +85,33 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 var BTCUSDC = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
 
                 // valid parameters
-                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, TimeSpan.FromDays(5), false, false);
-                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, Time.OneHour, false, false);
-                yield return new TestCaseData(BTCUSD, Resolution.Hour, TickType.Trade, Time.OneDay, false, false);
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, TimeSpan.FromDays(5), false);
+                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, Time.OneHour, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Hour, TickType.Trade, Time.OneDay, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false);
 
-                yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, Time.OneHour, false, false);
-                yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, Time.OneDay, false, false);
+                yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, Time.OneHour, false);
+                yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, Time.OneDay, false);
 
-                // invalid period, no error, empty result
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true, false);
+                // invalid period
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true);
 
                 // quote tick type, null result
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), false, true);
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.OpenInterest, TimeSpan.FromDays(15), false, true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.OpenInterest, TimeSpan.FromDays(15), true);
 
                 // invalid resolution, null result
-                yield return new TestCaseData(BTCUSD, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), false, true);
-                yield return new TestCaseData(BTCUSD, Resolution.Second, TickType.Trade, Time.OneMinute, false, true);
+                yield return new TestCaseData(BTCUSD, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), true);
+                yield return new TestCaseData(BTCUSD, Resolution.Second, TickType.Trade, Time.OneMinute, true);
 
                 // invalid symbol, null result
-                yield return new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.Coinbase), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false, true);
+                yield return new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.Coinbase), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
 
                 // invalid security type, null result
-                yield return new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false, true);
+                yield return new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
 
                 // invalid market, null result
-                yield return new TestCaseData(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Binance), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false, true);
+                yield return new TestCaseData(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Binance), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
             }
         }
     }
