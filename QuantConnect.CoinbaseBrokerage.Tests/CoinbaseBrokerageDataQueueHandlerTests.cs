@@ -22,6 +22,7 @@ using QuantConnect.Logging;
 using Microsoft.CodeAnalysis;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
+using QuantConnect.Tests;
 
 namespace QuantConnect.CoinbaseBrokerage.Tests
 {
@@ -39,6 +40,8 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
         {
             get
             {
+                TestGlobals.Initialize();
+
                 yield return new TestCaseData(BTCUSDC, Resolution.Tick);
                 yield return new TestCaseData(BTCUSDC, Resolution.Second);
                 yield return new TestCaseData(BTCUSDC, Resolution.Minute);

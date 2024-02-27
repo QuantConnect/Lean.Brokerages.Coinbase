@@ -25,7 +25,6 @@ using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
 using QuantConnect.Lean.Engine.DataFeeds;
-using QuantConnect.Lean.Engine.HistoricalData;
 
 namespace QuantConnect.CoinbaseBrokerage.Tests
 {
@@ -33,60 +32,48 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
     public class CoinbaseBrokerageHistoryProviderTests
     {
         [Test, TestCaseSource(nameof(TestParameters))]
-        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool shouldBeEmpty)
+        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool unsupported)
         {
-            var aggregator = new AggregationManager();
-
             var brokerage = new CoinbaseBrokerage(
                 Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com"),
                 Config.Get("coinbase-api-key"),
                 Config.Get("coinbase-api-secret"),
                 Config.Get("coinbase-rest-api", "https://api.coinbase.com"),
                 null,
-                aggregator,
+                new AggregationManager(),
                 null);
 
-            var historyProvider = new BrokerageHistoryProvider();
-            historyProvider.SetBrokerage(brokerage);
-            historyProvider.Initialize(new HistoryProviderInitializeParameters(null, null, null, null, null, null, null, false, new DataPermissionManager(), null));
-
             var now = DateTime.UtcNow;
+            var request = new HistoryRequest(now.Add(-period),
+                now,
+                typeof(TradeBar),
+                symbol,
+                resolution,
+                SecurityExchangeHours.AlwaysOpen(TimeZones.Utc),
+                DateTimeZone.Utc,
+                resolution,
+                false,
+                false,
+                DataNormalizationMode.Adjusted,
+                tickType);
 
-            var requests = new[]
+            var history = brokerage.GetHistory(request)?.ToList();
+
+            if (unsupported)
             {
-                new HistoryRequest(now.Add(-period),
-                    now,
-                    typeof(TradeBar),
-                    symbol,
-                    resolution,
-                    SecurityExchangeHours.AlwaysOpen(TimeZones.Utc),
-                    DateTimeZone.Utc,
-                    resolution,
-                    false,
-                    false,
-                    DataNormalizationMode.Adjusted,
-                    tickType)
-            };
+                Assert.IsNull(history);
+                return;
+            }
 
-            var history = historyProvider.GetHistory(requests, TimeZones.Utc).ToList();
+            Assert.IsNotNull(history);
+            Assert.IsNotEmpty(history);
 
-            foreach (var slice in history)
+            foreach (var bar in history.Cast<TradeBar>())
             {
-                var bar = slice.Bars[symbol];
-
                 Log.Trace($"{bar.Time}: {bar.Symbol} - O={bar.Open}, H={bar.High}, L={bar.Low}, C={bar.Close}, V={bar.Volume}");
             }
 
-            if (shouldBeEmpty)
-            {
-                Assert.IsTrue(history.Count == 0);
-            }
-            else
-            {
-                Assert.IsTrue(history.Count > 0);
-            }
-
-            Log.Trace("Data points retrieved: " + historyProvider.DataPointCount);
+            Log.Trace("Data points retrieved: " + history.Count);
         }
 
         private static IEnumerable<TestCaseData> TestParameters
@@ -106,21 +93,25 @@ namespace QuantConnect.CoinbaseBrokerage.Tests
                 yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, Time.OneHour, false);
                 yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, Time.OneDay, false);
 
-                // quote tick type, no error, empty result
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true);
+                // invalid period
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true);
 
-                // invalid resolution, no error, empty result
+                // quote tick type, null result
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.OpenInterest, TimeSpan.FromDays(15), true);
+
+                // invalid resolution, null result
                 yield return new TestCaseData(BTCUSD, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), true);
                 yield return new TestCaseData(BTCUSD, Resolution.Second, TickType.Trade, Time.OneMinute, true);
 
-                // invalid period, no error, empty result
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true);
-
-                // invalid symbol, no error, empty result
+                // invalid symbol, null result
                 yield return new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.Coinbase), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
 
-                // invalid security type, no error, empty result
+                // invalid security type, null result
                 yield return new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
+
+                // invalid market, null result
+                yield return new TestCaseData(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Binance), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
             }
         }
     }

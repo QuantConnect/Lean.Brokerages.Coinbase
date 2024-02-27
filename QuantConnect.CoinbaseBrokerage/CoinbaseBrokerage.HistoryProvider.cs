@@ -31,7 +31,10 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <summary>
         /// Prevent spam to external source
         /// </summary>
-        private bool _loggedCoinbaseSupportsOnlyTradeBars = false;
+        private bool _loggedCoinbaseSupportsOnlyTradeBars;
+        private bool _loggedUnsupportedAssetForHistory;
+        private bool _loggedUnsupportedResolutionForHistory;
+        private bool _loggedInvalidTimeRangeForHistory;
 
         /// <summary>
         /// Gets the history for the requested security
@@ -40,6 +43,16 @@ namespace QuantConnect.CoinbaseBrokerage
         /// <returns>An enumerable of bars covering the span specified in the request</returns>
         public override IEnumerable<BaseData> GetHistory(HistoryRequest request)
         {
+            if (!CanSubscribe(request.Symbol))
+            {
+                if (!_loggedUnsupportedAssetForHistory)
+                {
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "UnsupportedAsset",
+                        $"Unsupported asset: {request.Symbol.Value}, no history returned"));
+                }
+                return null;
+            }
+
             // Coinbase API only allows us to support history requests for TickType.Trade
             if (request.TickType != TickType.Trade)
             {
@@ -49,50 +62,41 @@ namespace QuantConnect.CoinbaseBrokerage
                     _algorithm?.Debug($"Warning.{nameof(CoinbaseBrokerage)}: history provider only supports trade information, does not support quotes.");
                     Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}(): only supports TradeBars");
                 }
-                yield break;
-            }
-
-            if (!_symbolMapper.IsKnownLeanSymbol(request.Symbol))
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidSymbol",
-                    $"Unknown symbol: {request.Symbol.Value}, no history returned"));
-                yield break;
-            }
-
-            if (request.Symbol.SecurityType != SecurityType.Crypto)
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidSecurityType",
-                    $"{request.Symbol.SecurityType} security type not supported, no history returned"));
-                yield break;
-            }
-
-            if (request.StartTimeUtc >= request.EndTimeUtc)
-            {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidDateRange",
-                    "The history request start date must precede the end date, no history returned"));
-                yield break;
+                return null;
             }
 
             if (request.Resolution == Resolution.Tick || request.Resolution == Resolution.Second)
             {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidResolution",
-                    $"{request.Resolution} resolution not supported, no history returned"));
-                yield break;
+                if (!_loggedUnsupportedResolutionForHistory)
+                {
+                    _loggedUnsupportedResolutionForHistory = true;
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidResolution",
+                        $"{request.Resolution} resolution not supported, no history returned"));
+                }
+                return null;
+            }
+
+            if (request.StartTimeUtc >= request.EndTimeUtc)
+            {
+                if (!_loggedInvalidTimeRangeForHistory)
+                {
+                    _loggedInvalidTimeRangeForHistory = true;
+                    OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "InvalidDateRange",
+                        "The history request start date must precede the end date, no history returned"));
+                }
+                return null;
             }
 
             Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(GetHistory)}: Submitting request: {request.Symbol.Value}: {request.Resolution} {request.StartTimeUtc} UTC -> {request.EndTimeUtc} UTC");
 
-            foreach (var tradeBar in GetHistoryFromCandles(request))
-            {
-                yield return tradeBar;
-            }
+            return GetHistoryFromCandles(request);
         }
 
         /// <summary>
         /// Returns TradeBars from Coinbase candles (only for Minute/Hour/Daily resolutions)
         /// </summary>
         /// <param name="request">The history request instance</param>
-        private IEnumerable<TradeBar> GetHistoryFromCandles(HistoryRequest request)
+        private IEnumerable<BaseData> GetHistoryFromCandles(HistoryRequest request)
         {
             var productId = _symbolMapper.GetBrokerageSymbol(request.Symbol);
             var resolutionTimeSpan = request.Resolution.ToTimeSpan();
@@ -107,6 +111,7 @@ namespace QuantConnect.CoinbaseBrokerage
                 Resolution.Minute => CandleGranularity.OneMinute,
                 Resolution.Hour => CandleGranularity.OneHour,
                 Resolution.Daily => CandleGranularity.OneDay,
+                // This should never happen if the right checks are in place in the caller
                 _ => throw new NotSupportedException($"The resolution {request.Resolution} is not supported.")
             };
 

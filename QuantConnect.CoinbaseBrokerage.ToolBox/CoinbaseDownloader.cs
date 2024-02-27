@@ -43,13 +43,8 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
             var endUtc = dataDownloaderGetParameters.EndUtc;
             var tickType = dataDownloaderGetParameters.TickType;
 
-            if (tickType != TickType.Trade)
-            {
-                return Enumerable.Empty<BaseData>();
-            }
-
-            var type = default(Type);
-            if(resolution == Resolution.Tick)
+            Type type;
+            if (resolution == Resolution.Tick)
             {
                 type = typeof(Tick);
             }
@@ -77,8 +72,7 @@ namespace QuantConnect.CoinbaseBrokerage.ToolBox
                 tickType);
 
             var brokerage = CreateBrokerage();
-            var data = brokerage.GetHistory(historyRequest);
-            return data;
+            return brokerage.GetHistory(historyRequest);
         }
 
         /// <summary>

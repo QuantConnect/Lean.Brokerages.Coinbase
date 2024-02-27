@@ -370,7 +370,8 @@ namespace QuantConnect.CoinbaseBrokerage
         {
             return !symbol.Value.Contains("UNIVERSE") &&
                 symbol.SecurityType == SecurityType.Crypto &&
-                symbol.ID.Market == MarketName;
+                symbol.ID.Market == MarketName &&
+                _symbolMapper.IsKnownLeanSymbol(symbol);
         }
 
         #endregion
