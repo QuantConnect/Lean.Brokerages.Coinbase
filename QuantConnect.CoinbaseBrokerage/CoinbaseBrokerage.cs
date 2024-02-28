@@ -27,18 +27,16 @@ using QuantConnect.Orders;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
-using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders.Fees;
 using System.Collections.Generic;
-using QuantConnect.Configuration;
 using System.Security.Cryptography;
 using System.Net.NetworkInformation;
-using QuantConnect.CoinbaseBrokerage.Api;
-using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Api;
+using BrokerageEnums = QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// Represents a partial class for interacting with the Coinbase brokerage using WebSocket communication.

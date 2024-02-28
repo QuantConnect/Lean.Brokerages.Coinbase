@@ -16,9 +16,9 @@
 using QuantConnect.ToolBox;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
-using QuantConnect.CoinbaseBrokerage.Api;
+using QuantConnect.Brokerages.Coinbase.Api;
 
-namespace QuantConnect.CoinbaseBrokerage.ToolBox
+namespace QuantConnect.Brokerages.Coinbase.ToolBox
 {
     /// <summary>
     /// Coinbase implementation of <see cref="IExchangeInfoDownloader"/>

@@ -20,16 +20,15 @@ using Newtonsoft.Json;
 using QuantConnect.Util;
 using QuantConnect.Orders;
 using System.Globalization;
-using QuantConnect.Brokerages;
 using QuantConnect.Securities;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models;
-using QuantConnect.CoinbaseBrokerage.Converters;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
-using QuantConnect.CoinbaseBrokerage.Models.Requests;
-using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models;
+using QuantConnect.Brokerages.Coinbase.Converters;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Requests;
+using BrokerageEnums = QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Api;
+namespace QuantConnect.Brokerages.Coinbase.Api;
 
 public class CoinbaseApi : IDisposable
 {

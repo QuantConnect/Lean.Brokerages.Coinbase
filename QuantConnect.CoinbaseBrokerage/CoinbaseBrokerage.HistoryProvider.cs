@@ -16,12 +16,11 @@
 using System;
 using QuantConnect.Data;
 using QuantConnect.Logging;
-using QuantConnect.Brokerages;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// Coinbase Brokerage - IHistoryProvider implementation

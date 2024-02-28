@@ -15,9 +15,9 @@
 
 using Newtonsoft.Json;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 /// <summary>
 /// Represents a message used for subscribing to WebSocket channels on Coinbase.

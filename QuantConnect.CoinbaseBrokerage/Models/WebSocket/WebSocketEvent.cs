@@ -15,9 +15,9 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+namespace QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 public class WebSocketEvent
 {
     [JsonProperty("type")]

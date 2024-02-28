@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
+namespace QuantConnect.Brokerages.Coinbase.Models.Enums;
 
 /// <summary>
 /// Represents the side of an order, indicating whether it is a buy or sell order.

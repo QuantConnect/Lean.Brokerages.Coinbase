@@ -7,10 +7,10 @@
         <TargetFramework>net6.0</TargetFramework>
         <Copyright>Copyright ©  2021</Copyright>
         <OutputPath>bin\$(Configuration)\</OutputPath>
-        <Product>QuantConnect.CoinbaseBrokerage.ToolBox</Product>
-        <AssemblyName>QuantConnect.CoinbaseBrokerage.ToolBox</AssemblyName>
-        <RootNamespace>QuantConnect.CoinbaseBrokerage.ToolBox</RootNamespace>
-        <AssemblyTitle>QuantConnect.CoinbaseBrokerage.ToolBox</AssemblyTitle>
+        <Product>QuantConnect.Brokerages.Coinbase.ToolBox</Product>
+        <AssemblyName>QuantConnect.Brokerages.Coinbase.ToolBox</AssemblyName>
+        <RootNamespace>QuantConnect.Brokerages.Coinbase.ToolBox</RootNamespace>
+        <AssemblyTitle>QuantConnect.Brokerages.Coinbase.ToolBox</AssemblyTitle>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>

@@ -24,7 +24,7 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace QuantConnect.CoinbaseBrokerage.Api;
+namespace QuantConnect.Brokerages.Coinbase.Api;
 
 /// <summary>
 /// Coinbase api client implementation

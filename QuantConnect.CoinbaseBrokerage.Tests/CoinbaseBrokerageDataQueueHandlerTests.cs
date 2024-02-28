@@ -24,7 +24,7 @@ using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.Tests;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     /// <summary>
     /// The class contains DataQueueHandler's tests

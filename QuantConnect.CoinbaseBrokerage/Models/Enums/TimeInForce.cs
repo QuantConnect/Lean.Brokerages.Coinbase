@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
+namespace QuantConnect.Brokerages.Coinbase.Models.Enums;
 
 /// <summary>
 /// Time in force policies provide guarantees about the lifetime of an order.

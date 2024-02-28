@@ -15,7 +15,7 @@
 
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Constants;
+namespace QuantConnect.Brokerages.Coinbase.Models.Constants;
 
 /// <summary>
 /// The Brokerage Coinbase WebSocket feed provides the following channels

@@ -15,7 +15,7 @@
 
 using Newtonsoft.Json;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Requests;
+namespace QuantConnect.Brokerages.Coinbase.Models.Requests;
 
 /// <summary>
 /// Coinbase edit order api request

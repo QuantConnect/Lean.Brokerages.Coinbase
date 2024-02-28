@@ -3,10 +3,10 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <TargetFramework>net6.0</TargetFramework>
-    <Product>QuantConnect.CoinbaseBrokerage</Product>
-    <AssemblyName>QuantConnect.CoinbaseBrokerage</AssemblyName>
-    <RootNamespace>QuantConnect.CoinbaseBrokerage</RootNamespace>
-    <AssemblyTitle>QuantConnect.CoinbaseBrokerage</AssemblyTitle>
+    <Product>QuantConnect.Brokerages.Coinbase</Product>
+    <AssemblyName>QuantConnect.Brokerages.Coinbase</AssemblyName>
+    <RootNamespace>QuantConnect.Brokerages.Coinbase</RootNamespace>
+    <AssemblyTitle>QuantConnect.Brokerages.Coinbase</AssemblyTitle>
     <OutputType>Library</OutputType>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

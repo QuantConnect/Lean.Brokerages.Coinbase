@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 public readonly struct CoinbaseProductCandles
 {

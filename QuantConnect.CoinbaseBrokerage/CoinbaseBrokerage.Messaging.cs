@@ -23,17 +23,16 @@ using QuantConnect.Logging;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using QuantConnect.Securities;
-using QuantConnect.Brokerages;
 using QuantConnect.Orders.Fees;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using QuantConnect.CoinbaseBrokerage.Models;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
-using QuantConnect.CoinbaseBrokerage.Models.Constants;
-using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+using QuantConnect.Brokerages.Coinbase.Models;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Constants;
+using QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     public partial class CoinbaseBrokerage
     {

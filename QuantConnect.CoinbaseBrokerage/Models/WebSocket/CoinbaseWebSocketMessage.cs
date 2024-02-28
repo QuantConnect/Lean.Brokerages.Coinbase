@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 using System.Collections.Generic;
 using System;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+namespace QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 
 public class CoinbaseWebSocketMessage<T> where T : WebSocketEvent
 {

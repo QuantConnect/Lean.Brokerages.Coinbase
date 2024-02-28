@@ -17,7 +17,7 @@ using NUnit.Framework;
 using QuantConnect.Util;
 using QuantConnect.Interfaces;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     public class CoinbaseBrokerageFactoryTests

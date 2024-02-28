@@ -13,10 +13,10 @@
  * limitations under the License.
 */
 
-using QuantConnect.CoinbaseBrokerage.Models;
-using BrokerageEnums = QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models;
+using BrokerageEnums = QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// Utility methods for Coinbase brokerage

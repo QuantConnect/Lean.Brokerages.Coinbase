@@ -18,11 +18,10 @@ using QuantConnect.Data;
 using QuantConnect.Util;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
-using QuantConnect.Brokerages;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// Factory method to create Coinbase WebSockets brokerage

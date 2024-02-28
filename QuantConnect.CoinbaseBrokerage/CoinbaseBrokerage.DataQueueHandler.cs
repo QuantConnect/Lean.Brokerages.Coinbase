@@ -21,7 +21,7 @@ using QuantConnect.Interfaces;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage
+namespace QuantConnect.Brokerages.Coinbase
 {
     /// <summary>
     /// An implementation of <see cref="IDataQueueHandler"/> for Coinbase

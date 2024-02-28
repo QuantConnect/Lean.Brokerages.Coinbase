@@ -17,7 +17,7 @@ using System;
 using QuantConnect.Configuration;
 using static QuantConnect.Configuration.ApplicationParser;
 
-namespace QuantConnect.CoinbaseBrokerage.ToolBox
+namespace QuantConnect.Brokerages.Coinbase.ToolBox
 {
     internal static class Program
     {

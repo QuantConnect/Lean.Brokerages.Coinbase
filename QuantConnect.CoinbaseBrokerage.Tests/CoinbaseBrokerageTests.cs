@@ -20,15 +20,14 @@ using System.Threading;
 using QuantConnect.Orders;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
-using QuantConnect.Brokerages;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
 using QuantConnect.Tests.Brokerages;
-using QuantConnect.CoinbaseBrokerage.Api;
+using QuantConnect.Brokerages.Coinbase.Api;
 using QuantConnect.Lean.Engine.DataFeeds;
 using QuantConnect.Tests.Common.Securities;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     public partial class CoinbaseBrokerageTests : BrokerageTests

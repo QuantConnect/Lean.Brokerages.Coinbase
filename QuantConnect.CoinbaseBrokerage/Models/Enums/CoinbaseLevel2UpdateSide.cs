@@ -17,7 +17,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System.Runtime.Serialization;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Enums;
+namespace QuantConnect.Brokerages.Coinbase.Models.Enums;
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum CoinbaseLevel2UpdateSide

@@ -15,15 +15,13 @@
 
 using System;
 using NodaTime;
-using System.Linq;
 using QuantConnect.Data;
 using QuantConnect.Securities;
-using QuantConnect.Brokerages;
 using QuantConnect.Data.Market;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.ToolBox
+namespace QuantConnect.Brokerages.Coinbase.ToolBox
 {
     /// <summary>
     /// Coinbase Data Downloader class
