@@ -40,7 +40,7 @@ jobs:
         run: mv Lean ../Lean
 
       - name: Build
-        run: dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.Brokerages.Coinbase.sln
+        run: dotnet build /p:Configuration=Release /v:quiet /p:WarningLevel=1 QuantConnect.CoinbaseBrokerage.sln
 
       - name: Run Tests
         run: dotnet test ./QuantConnect.CoinbaseBrokerage.Tests/bin/Release/QuantConnect.Brokerages.Coinbase.Tests.dll
