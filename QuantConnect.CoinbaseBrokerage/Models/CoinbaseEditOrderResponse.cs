@@ -15,7 +15,7 @@
 
 using Newtonsoft.Json;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 public readonly struct CoinbaseEditOrderResponse
 {

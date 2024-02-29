@@ -17,7 +17,7 @@ using System;
 using Newtonsoft.Json;
 using System.Globalization;
 
-namespace QuantConnect.CoinbaseBrokerage.Converters;
+namespace QuantConnect.Brokerages.Coinbase.Converters;
 
 public class CoinbaseDecimalStringConverter : JsonConverter<decimal>
 {

@@ -20,7 +20,7 @@ using System.Collections;
 using QuantConnect.Logging;
 using QuantConnect.Configuration;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     public class TestSetup

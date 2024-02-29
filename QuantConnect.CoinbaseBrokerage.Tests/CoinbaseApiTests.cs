@@ -18,14 +18,13 @@ using RestSharp;
 using System.Linq;
 using NUnit.Framework;
 using Newtonsoft.Json.Linq;
-using QuantConnect.Brokerages;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
-using QuantConnect.CoinbaseBrokerage.Api;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
-using QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+using QuantConnect.Brokerages.Coinbase.Api;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     [Explicit("Use tests for more clarification of API")]

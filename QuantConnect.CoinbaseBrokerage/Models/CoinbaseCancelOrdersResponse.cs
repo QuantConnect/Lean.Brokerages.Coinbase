@@ -16,7 +16,7 @@
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 public readonly struct CoinbaseCancelOrdersResponse
 {

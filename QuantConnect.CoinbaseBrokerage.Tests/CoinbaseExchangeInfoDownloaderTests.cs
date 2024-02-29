@@ -19,7 +19,7 @@ using NUnit.Framework;
 using QuantConnect.Util;
 using QuantConnect.ToolBox;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     public class CoinbaseExchangeInfoDownloaderTests

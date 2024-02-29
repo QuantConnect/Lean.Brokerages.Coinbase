@@ -13,13 +13,12 @@
  * limitations under the License.
 */
 
-using System;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using Newtonsoft.Json.Converters;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.WebSocket;
+namespace QuantConnect.Brokerages.Coinbase.Models.WebSocket;
 
 public class CoinbaseLevel2Event : WebSocketEvent
 {

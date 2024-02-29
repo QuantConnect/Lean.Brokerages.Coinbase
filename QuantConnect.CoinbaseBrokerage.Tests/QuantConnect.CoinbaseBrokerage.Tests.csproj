@@ -9,10 +9,10 @@
         <Copyright>Copyright ©  2021</Copyright>
         <TestProjectType>UnitTest</TestProjectType>
         <OutputPath>bin\$(Configuration)\</OutputPath>
-        <Product>QuantConnect.CoinbaseBrokerage.Tests</Product>
-        <AssemblyName>QuantConnect.CoinbaseBrokerage.Tests</AssemblyName>
-        <RootNamespace>QuantConnect.CoinbaseBrokerage.Tests</RootNamespace>
-        <AssemblyTitle>QuantConnect.CoinbaseBrokerage.Tests</AssemblyTitle>
+        <Product>QuantConnect.Brokerages.Coinbase.Tests</Product>
+        <AssemblyName>QuantConnect.Brokerages.Coinbase.Tests</AssemblyName>
+        <RootNamespace>QuantConnect.Brokerages.Coinbase.Tests</RootNamespace>
+        <AssemblyTitle>QuantConnect.Brokerages.Coinbase.Tests</AssemblyTitle>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
 

@@ -22,7 +22,7 @@ using System.Globalization;
 using QuantConnect.ToolBox;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.ToolBox
+namespace QuantConnect.Brokerages.Coinbase.ToolBox
 {
     public static class CoinbaseDownloaderProgram
     {

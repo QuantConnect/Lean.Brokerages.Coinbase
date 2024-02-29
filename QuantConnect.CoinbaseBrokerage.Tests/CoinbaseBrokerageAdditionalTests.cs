@@ -21,7 +21,7 @@ using QuantConnect.Algorithm;
 using QuantConnect.Configuration;
 using QuantConnect.Lean.Engine.DataFeeds;
 
-namespace QuantConnect.CoinbaseBrokerage.Tests
+namespace QuantConnect.Brokerages.Coinbase.Tests
 {
     [TestFixture]
     public class CoinbaseBrokerageAdditionalTests

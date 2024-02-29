@@ -16,9 +16,9 @@
 using System;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using QuantConnect.CoinbaseBrokerage.Models.Enums;
+using QuantConnect.Brokerages.Coinbase.Models.Enums;
 
-namespace QuantConnect.CoinbaseBrokerage.Models.Requests;
+namespace QuantConnect.Brokerages.Coinbase.Models.Requests;
 
 /// <summary>
 /// Coinbase place order api request

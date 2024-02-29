@@ -17,7 +17,7 @@ using System;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 
-namespace QuantConnect.CoinbaseBrokerage.Models;
+namespace QuantConnect.Brokerages.Coinbase.Models;
 
 /// <summary>
 /// Business data of Coinbase account response
