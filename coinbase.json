@@ -16,20 +16,20 @@
 	"documentation": "/docs/v2/cloud-platform/live-trading/brokerages/coinbase",
 	"module-specification": {
 		"download": {
-            "data-types": [
-                "Trade"
-            ],
-            "resolutions": [
-                "Minute",
-                "Hour",
-                "Daily"
-            ],
-            "security-types": [
+			"data-types": [
+				"Trade"
+			],
+			"resolutions": [
+				"Minute",
+				"Hour",
+				"Daily"
+			],
+			"security-types": [
 				"Crypto"
-            ],
-            "markets": [
-                "Coinbase"
-            ]
-        }
-    }
+			],
+			"markets": [
+				"Coinbase"
+			]
+		}
+	}
 }
