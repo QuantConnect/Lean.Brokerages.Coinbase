@@ -76,26 +76,14 @@ public class CoinbaseApi : IDisposable
     }
 
     /// <summary>
-    /// Generates WebSocket signatures for authentication.
+    /// Retrieves a JWT token for authenticating WebSocket connections.
     /// </summary>
-    /// <param name="channel">The WebSocket channel for which the signature is generated.</param>
-    /// <param name="productIds">A collection of product identifiers for which the signature is generated.</param>
     /// <returns>
-    /// A tuple containing the API key, timestamp, and signature required for WebSocket authentication.
+    /// A <see cref="string"/> representing the JWT token used for WebSocket authentication.
     /// </returns>
-    /// <remarks>
-    /// The <paramref name="channel"/> <see cref="Models.Constants.CoinbaseWebSocketChannels"/> parameter specifies the WebSocket channel, 
-    /// and <paramref name="productIds"/> contains a collection of product identifiers for which the authentication signature is generated.
-    /// </remarks>
-    /// <example>
-    /// This example demonstrates how to use the GetWebSocketSignatures method:
-    /// <code>
-    /// var (apiKey, timestamp, signature) = GetWebSocketSignatures("trades", new List<string> { "BTC-USD", "ETH-USD" });
-    /// </code>
-    /// </example>
-    public (string apiKey, string timestamp, string signature) GetWebSocketSignatures(string channel, ICollection<string> productIds)
+    public string GetWebSocketJWTToken()
     {
-        return _apiClient.GenerateWebSocketSignature(channel, productIds);
+        return _apiClient.GenerateWebSocketJWTToken();
     }
 
     /// <summary>

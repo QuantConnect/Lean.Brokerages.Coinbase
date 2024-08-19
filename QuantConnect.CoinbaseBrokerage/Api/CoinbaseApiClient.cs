@@ -99,51 +99,9 @@ public class CoinbaseApiClient : IDisposable
         return response;
     }
 
-    /// <summary>
-    /// Generates a signature for a given set of parameters using HMAC-SHA256.
-    /// </summary>
-    /// <param name="timeStamp">The timestamp of the request.</param>
-    /// <param name="httpMethod">The HTTP method used for the request (e.g., GET, POST).</param>
-    /// <param name="urlPath">The URL path of the request.</param>
-    /// <param name="body">The request body.</param>
-    /// <returns>
-    /// A string representation of the generated signature in lowercase hexadecimal format.
-    /// </returns>
-    /// <remarks>
-    /// The signature is computed using the HMAC-SHA256 algorithm and is typically used for authentication and message integrity.
-    /// </remarks>
-    private string GetSign(string timeStamp, string httpMethod, string urlPath, string body)
+    public string GenerateWebSocketJWTToken()
     {
-        var preHash = timeStamp + httpMethod + urlPath + body;
-
-        var sig = _hmacSha256.ComputeHash(Encoding.UTF8.GetBytes(preHash));
-
-        return Convert.ToHexString(sig).ToLowerInvariant();
-    }
-
-    public (string apiKey, string timestamp, string signature) GenerateWebSocketSignature(string channel, ICollection<string> productIds)
-    {
-        var timestamp = GetNonce();
-
-        var products = string.Join(",", productIds ?? Array.Empty<string>());
-
-        var signature = GetSign(timestamp, string.Empty, channel, products);
-
-        return (_apiKey, timestamp, signature);
-    }
-
-    /// <summary>
-    /// Generates a unique nonce based on the current UTC time in Unix timestamp format.
-    /// </summary>
-    /// <returns>
-    /// A string representation of the generated nonce.
-    /// </returns>
-    /// <remarks>
-    /// The nonce is used to ensure the uniqueness of each request, typically in the context of security and authentication.
-    /// </remarks>
-    private static string GetNonce()
-    {
-        return Time.DateTimeToUnixTimeStamp(DateTime.UtcNow).ToString("F0", CultureInfo.InvariantCulture);
+        return GenerateWebSocketToken(_apiKey, _parsedCbPrivateKey);
     }
 
     private static string GenerateRestToken(string name, string secret, string uri)
@@ -178,15 +136,15 @@ public class CoinbaseApiClient : IDisposable
     /// Generates a JWT token with the specified name and secret using ECDsa signing.
     /// </summary>
     /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
-    /// <param name="secret">The ECDsa private key in Base64 format used to sign the token.</param>
+    /// <param name="privateKey">The ECDsa private key in Base64 format used to sign the token.</param>
     /// <returns>A signed JWT token as a string.</returns>
     /// <remarks>
     /// This method creates a JWT token with a subject, issuer, and a short expiration time, signed using the ES256 algorithm. 
     /// It also includes a nonce in the token headers to prevent replay attacks.
     /// </remarks>
-    private static string GenerateWebSocketToken(string name, string secret)
+    private static string GenerateWebSocketToken(string name, string privateKey)
     {
-        var privateKeyBytes = Convert.FromBase64String(secret); // Assuming PEM is base64 encoded
+        var privateKeyBytes = Convert.FromBase64String(privateKey); // Assuming PEM is base64 encoded
         using var key = ECDsa.Create();
         key.ImportECPrivateKey(privateKeyBytes, out _);
 
