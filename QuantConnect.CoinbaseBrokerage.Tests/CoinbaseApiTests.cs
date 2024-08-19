@@ -41,24 +41,31 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             CoinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
         }
 
-        [TestCase("", "")]
-        [TestCase("1", "2")]
-        public void InvalidAuthenticationCredentialsShouldThrowException(string apiKey, string apiKeySecret)
+        [TestCase("", "", typeof(ArgumentOutOfRangeException))]
+        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==\n-----END EC PRIVATE KEY-----\n", typeof(System.Security.Cryptography.CryptographicException))]
+        public void InvalidAuthenticationCredentialsShouldThrowException(string apiKey, string apiKeySecret, Type expectedException)
         {
-            var coinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
+            try
+            {
+                var coinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
 
-            // call random endpoint with incorrect credential
-            Assert.Throws<Exception>(() => coinbaseApi.GetAccounts());
+                // call random endpoint with incorrect credential
+                Assert.Throws(expectedException, () => coinbaseApi.GetAccounts());
+            }
+            catch (Exception ex)
+            {
+                Assert.IsInstanceOf(expectedException, ex);
+            }
         }
 
-        [Test] 
-        public void GetListAccounts() 
+        [Test]
+        public void GetListAccounts()
         {
             var accounts = CoinbaseApi.GetAccounts();
 
             Assert.Greater(accounts.Count(), 0);
 
-            foreach(var account in accounts)
+            foreach (var account in accounts)
             {
                 Assert.IsTrue(account.Active);
                 Assert.IsNotEmpty(account.Name);
@@ -161,13 +168,13 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 Assert.GreaterOrEqual(tick.NewQuantity, 0);
                 Assert.GreaterOrEqual(tick.PriceLevel, 0);
                 Assert.IsInstanceOf<CoinbaseLevel2UpdateSide>(tick.Side);
-            }            
+            }
         }
 
-        [TestCase("/api/v3/brokerage/orders", null, "Unauthorized")]
-        [TestCase("/api/v3/brokerage/orders", "", "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", null, "Bad Request")]
+        [TestCase("/api/v3/brokerage/orders", "", "Bad Request")]
         [TestCase("/api/v3/brokerage/orders", "{null}", "Bad Request")]
-        [TestCase("/api/v3/brokerage/orders", "[]", "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", "[]", "Bad Request")]
         public void ValidateCoinbaseRestRequestWithWrongBodyParameter(string uriPath, object bodyData, string message)
         {
             var apiKey = Config.Get("coinbase-api-key");
