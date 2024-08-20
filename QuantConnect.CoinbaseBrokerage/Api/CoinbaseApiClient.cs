@@ -34,19 +34,51 @@ namespace QuantConnect.Brokerages.Coinbase.Api;
 /// </summary>
 public class CoinbaseApiClient : IDisposable
 {
+    /// <summary>
+    /// Provides a thread-safe random number generator instance.
+    /// </summary>
     private readonly static Random _random = new Random();
     private readonly string _apiKey;
+
+    /// <summary>
+    /// Stores the parsed Coinbase private key in a suitable format.
+    /// </summary>
     private readonly string _parsedCbPrivateKey;
-    private readonly HMACSHA256 _hmacSha256;
+
+    /// <summary>
+    /// Represents the REST client used to send HTTP requests to the Coinbase API.
+    /// </summary>
     private readonly RestClient _restClient;
+
+    /// <summary>
+    /// Manages rate limiting for outbound API requests.
+    /// </summary>
     private readonly RateGate _rateGate;
 
+    /// <summary>
+    /// Represents the Unix epoch time, which is the starting point for Unix time calculation.
+    /// </summary>
+    private static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CoinbaseApiClient"/> class with the specified API key, 
+    /// API key secret, REST API URL, and maximum requests per second.
+    /// </summary>
+    /// <param name="apiKey">The API key required for authenticating requests.</param>
+    /// <param name="apiKeySecret">The API key secret used to sign requests. This will be parsed into a usable format.</param>
+    /// <param name="restApiUrl">The base URL of the Coinbase REST API.</param>
+    /// <param name="maxRequestsPerSecond">The maximum number of requests that can be sent to the API per second.</param>
+    /// <remarks>
+    /// This constructor sets up the Coinbase API client by initializing the API key, parsing the private key, 
+    /// configuring the REST client with the provided API URL, and setting up a rate limiter to ensure that 
+    /// requests do not exceed the specified maximum rate. The <see cref="RateGate"/> helps prevent the client 
+    /// from hitting rate limits imposed by the API.
+    /// </remarks>
     public CoinbaseApiClient(string apiKey, string apiKeySecret, string restApiUrl, int maxRequestsPerSecond)
     {
         _apiKey = apiKey;
         _restClient = new RestClient(restApiUrl);
         _parsedCbPrivateKey = ParseKey(apiKeySecret);
-        _hmacSha256 = new HMACSHA256(Encoding.UTF8.GetBytes(apiKeySecret));
         _rateGate = new RateGate(maxRequestsPerSecond, Time.OneSecond);
     }
 
@@ -99,70 +131,65 @@ public class CoinbaseApiClient : IDisposable
         return response;
     }
 
-    public string GenerateWebSocketJWTToken()
+    /// <summary>
+    /// Generates a JWT token for WebSocket connections.
+    /// </summary>
+    /// <returns>A signed JWT token as a string.</returns>
+    public string GenerateWebSocketToken()
     {
-        return GenerateWebSocketToken(_apiKey, _parsedCbPrivateKey);
-    }
-
-    private static string GenerateRestToken(string name, string secret, string uri)
-    {
-        var privateKeyBytes = Convert.FromBase64String(secret); // Assuming PEM is base64 encoded
-        using var key = ECDsa.Create();
-        key.ImportECPrivateKey(privateKeyBytes, out _);
-
-        var payload = new Dictionary<string, object>
-             {
-                 { "sub", name },
-                 { "iss", "coinbase-cloud" },
-                 { "nbf", Convert.ToInt64((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds) },
-                 { "exp", Convert.ToInt64((DateTime.UtcNow.AddMinutes(1) - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds) },
-                 { "uri", uri }
-             };
-
-        var extraHeaders = new Dictionary<string, object>
-             {
-                 { "kid", name },
-                 // add nonce to prevent replay attacks with a random 10 digit number
-                 { "nonce", RandomHex(10) },
-                 { "typ", "JWT"}
-             };
-
-        var encodedToken = JWT.Encode(payload, key, JwsAlgorithm.ES256, extraHeaders);
-
-        return encodedToken;
+        return GenerateToken(_apiKey, _parsedCbPrivateKey);
     }
 
     /// <summary>
-    /// Generates a JWT token with the specified name and secret using ECDsa signing.
+    /// Generates a JWT token for REST API requests.
+    /// </summary>
+    /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
+    /// <param name="secret">The ECDsa private key in Base64 format used to sign the token.</param>
+    /// <param name="uri">The URI to include in the token payload.</param>
+    /// <returns>A signed JWT token as a string.</returns>
+    private static string GenerateRestToken(string name, string secret, string uri)
+    {
+        return GenerateToken(name, secret, uri);
+    }
+
+    /// <summary>
+    /// Generates a JWT token with the specified parameters using ECDsa signing.
     /// </summary>
     /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
     /// <param name="privateKey">The ECDsa private key in Base64 format used to sign the token.</param>
+    /// <param name="uri">The URI to include in the token payload. Pass null for WebSocket tokens.</param>
     /// <returns>A signed JWT token as a string.</returns>
     /// <remarks>
-    /// This method creates a JWT token with a subject, issuer, and a short expiration time, signed using the ES256 algorithm. 
+    /// This method creates a JWT token with a subject, issuer, and a short expiration time, signed using the ES256 algorithm.
     /// It also includes a nonce in the token headers to prevent replay attacks.
     /// </remarks>
-    private static string GenerateWebSocketToken(string name, string privateKey)
+    private static string GenerateToken(string name, string privateKey, string uri = null)
     {
         var privateKeyBytes = Convert.FromBase64String(privateKey); // Assuming PEM is base64 encoded
         using var key = ECDsa.Create();
         key.ImportECPrivateKey(privateKeyBytes, out _);
+        var utcNow = DateTime.UtcNow;
 
         var payload = new Dictionary<string, object>
-             {
-                 { "sub", name },
-                 { "iss", "coinbase-cloud" },
-                 { "nbf", Convert.ToInt64((DateTime.UtcNow - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds) },
-                 { "exp", Convert.ToInt64((DateTime.UtcNow.AddMinutes(1) - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds) },
-             };
+         {
+             { "sub", name },
+             { "iss", "coinbase-cloud" },
+             { "nbf", Convert.ToInt64((utcNow - EpochTime).TotalSeconds) },
+             { "exp", Convert.ToInt64((utcNow.AddMinutes(1) - EpochTime).TotalSeconds) }
+         };
+
+        if (uri != null)
+        {
+            payload.Add("uri", uri);
+        }
 
         var extraHeaders = new Dictionary<string, object>
-             {
-                 { "kid", name },
-                 // add nonce to prevent replay attacks with a random 10 digit number
-                 { "nonce", RandomHex(10) },
-                 { "typ", "JWT"}
-             };
+         {
+             { "kid", name },
+             // add nonce to prevent replay attacks with a random 10 digit number
+             { "nonce", RandomHex(10) },
+             { "typ", "JWT"}
+         };
 
         var encodedToken = JWT.Encode(payload, key, JwsAlgorithm.ES256, extraHeaders);
 
@@ -214,6 +241,20 @@ public class CoinbaseApiClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Custom validator for checking the token's lifetime.
+    /// </summary>
+    /// <param name="notBefore">The 'Not Before' date/time from the token's claims.</param>
+    /// <param name="expires">The expiration date/time from the token's claims.</param>
+    /// <param name="tokenToValidate">The security token being validated.</param>
+    /// <param name="param">The token validation parameters.</param>
+    /// <returns>
+    /// <c>true</c> if the token is valid based on its expiration time; otherwise, <c>false</c>.
+    /// </returns>
+    /// <remarks>
+    /// This custom lifetime validator ensures that the JWT token has not expired. It compares the 
+    /// token's expiration time against the current UTC time to determine its validity.
+    /// </remarks>
     private static bool CustomLifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken tokenToValidate, TokenValidationParameters @param)
     {
         if (expires != null)
@@ -271,6 +312,6 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     public void Dispose()
     {
-        _hmacSha256.DisposeSafely();
+        _rateGate.Dispose();
     }
 }

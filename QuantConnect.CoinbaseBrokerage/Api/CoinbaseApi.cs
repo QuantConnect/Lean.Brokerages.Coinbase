@@ -83,7 +83,7 @@ public class CoinbaseApi : IDisposable
     /// </returns>
     public string GetWebSocketJWTToken()
     {
-        return _apiClient.GenerateWebSocketJWTToken();
+        return _apiClient.GenerateWebSocketToken();
     }
 
     /// <summary>
