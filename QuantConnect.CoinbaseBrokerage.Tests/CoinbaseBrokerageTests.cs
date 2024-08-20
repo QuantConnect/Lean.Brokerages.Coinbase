@@ -17,9 +17,11 @@ using Moq;
 using System;
 using NUnit.Framework;
 using System.Threading;
+using QuantConnect.Data;
 using QuantConnect.Orders;
 using QuantConnect.Interfaces;
 using QuantConnect.Securities;
+using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
 using QuantConnect.Tests.Brokerages;
@@ -33,6 +35,19 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
     public partial class CoinbaseBrokerageTests : BrokerageTests
     {
         #region Properties
+
+        /// <summary>
+        /// The currency used as the quote currency in the trading pair.
+        /// </summary>
+        /// <remarks>
+        /// This field represents the quote currency for the trading pair, which is combined with the base currency
+        /// to form the full symbol. For example, in the symbol <see cref="Symbol"/> which represents "BTCUSDC",
+        /// "BTC" is the base currency, and "USDC" (stored in this field) is the quote currency.
+        /// The quote currency is what the base currency is being traded against, and in this case, "USDC" is
+        /// the stablecoin used on the Coinbase platform.
+        /// </remarks>
+        private string QuoteCurrency = "USDC";
+
         protected override Symbol Symbol => Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
 
         protected virtual ISymbolMapper SymbolMapper => new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase);
@@ -52,20 +67,20 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
 
         protected override IBrokerage CreateBrokerage(IOrderProvider orderProvider, ISecurityProvider securityProvider)
         {
-            var securities = new SecurityManager(new TimeKeeper(DateTime.UtcNow, TimeZones.NewYork))
+            var securityManager = new SecurityManager(new TimeKeeper(DateTime.UtcNow, TimeZones.NewYork))
             {
-                {Symbol, CreateSecurity(Symbol)}
-            };
+                CreateSecurity(Symbol)
+            };  
 
-            var transactions = new SecurityTransactionManager(null, securities);
+            var transactions = new SecurityTransactionManager(null, securityManager);
             transactions.SetOrderProcessor(new FakeOrderProcessor());
 
             var algorithmSettings = new AlgorithmSettings();
             var algorithm = new Mock<IAlgorithm>();
             algorithm.Setup(a => a.Transactions).Returns(transactions);
             algorithm.Setup(a => a.BrokerageModel).Returns(new CoinbaseBrokerageModel());
-            algorithm.Setup(a => a.Portfolio).Returns(new SecurityPortfolioManager(securities, transactions, algorithmSettings));
-            algorithm.Setup(a => a.Securities).Returns(securities);
+            algorithm.Setup(a => a.Portfolio).Returns(new SecurityPortfolioManager(securityManager, transactions, algorithmSettings));
+            algorithm.Setup(a => a.Securities).Returns(securityManager);
 
             var apiKey = Config.Get("coinbase-api-key");
             var apiSecret = Config.Get("coinbase-api-secret");
@@ -251,6 +266,31 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             };
 
             Assert.Throws<NotSupportedException>(() => Brokerage.UpdateOrder(order));
+        }
+
+        private Security CreateSecurity(Symbol symbol)
+        {
+            var timezone = TimeZones.NewYork;
+
+            var config = new SubscriptionDataConfig(
+                typeof(TradeBar),
+                symbol,
+                Resolution.Hour,
+                timezone,
+                timezone,
+                true,
+                false,
+                false);
+
+            return new Security(
+                SecurityExchangeHours.AlwaysOpen(timezone),
+                config,
+                new Cash(QuoteCurrency, 0, 1),
+                new SymbolProperties(symbol.Value, QuoteCurrency, 1, 0.01m, 0.00000001m, string.Empty),
+                ErrorCurrencyConverter.Instance,
+                RegisteredSecurityDataTypesProvider.Null,
+                new SecurityCache()
+            );
         }
     }
 }
