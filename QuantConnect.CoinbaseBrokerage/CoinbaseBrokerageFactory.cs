@@ -80,11 +80,7 @@ namespace QuantConnect.Brokerages.Coinbase
                 throw new ArgumentException(string.Join(Environment.NewLine, errors));
             }
 
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
-                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
-                forceTypeNameOnExisting: false);
-
-            var brokerage = new CoinbaseBrokerage(wsUrl, name, privateKey, apiUrl, algorithm, aggregator, job);
+            var brokerage = new CoinbaseBrokerage(wsUrl, name, privateKey, apiUrl, algorithm, job);
 
             // Add the brokerage to the composer to ensure its accessible to the live data feed.
             Composer.Instance.AddPart<IDataQueueHandler>(brokerage);

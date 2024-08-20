@@ -89,7 +89,7 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
 
             _api = new CoinbaseApi(SymbolMapper, null, name, privateKey, restApiUrl);
 
-            return new CoinbaseBrokerage(webSocketUrl, name, privateKey, restApiUrl, algorithm.Object, orderProvider, new AggregationManager(), null);
+            return new CoinbaseBrokerage(webSocketUrl, name, privateKey, restApiUrl, algorithm.Object, orderProvider, null);
         }
 
         /// <summary>

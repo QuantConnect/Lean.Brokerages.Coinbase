@@ -71,9 +71,6 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <param name="job">Job we're subscribing for</param>
         public void SetJob(LiveNodePacket job)
         {
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
-                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"), forceTypeNameOnExisting: false);
-
             Initialize(
                 webSocketUrl: job.BrokerageData["coinbase-url"],
                 name: job.BrokerageData["coinbase-api-name"],
@@ -81,7 +78,6 @@ namespace QuantConnect.Brokerages.Coinbase
                 restApiUrl: job.BrokerageData["coinbase-rest-api"],
                 algorithm: null,
                 orderProvider: null,
-                aggregator: aggregator,
                 job: job
             );
 

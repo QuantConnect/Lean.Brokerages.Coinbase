@@ -74,9 +74,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             var name = Config.Get("coinbase-api-name");
             var privateKey = Config.Get("coinbase-api-private-key");
             var algorithm = new QCAlgorithm();
-            var aggregator = new AggregationManager();
 
-            return new CoinbaseBrokerage(wssUrl, name, privateKey, restApiUrl, algorithm, aggregator, null);
+            return new CoinbaseBrokerage(wssUrl, name, privateKey, restApiUrl, algorithm, null);
         }
     }
 }

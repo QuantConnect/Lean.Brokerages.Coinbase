@@ -31,6 +31,7 @@ using QuantConnect.Securities;
 using QuantConnect.Interfaces;
 using QuantConnect.Orders.Fees;
 using System.Collections.Generic;
+using QuantConnect.Configuration;
 using System.Security.Cryptography;
 using System.Net.NetworkInformation;
 using QuantConnect.Brokerages.Coinbase.Api;
@@ -93,11 +94,10 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="restApiUrl">api url</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
-        /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
         public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
-            IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
-            : this(webSocketUrl, name, privateKey, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, aggregator, job)
+            IAlgorithm algorithm, LiveNodePacket job)
+            : this(webSocketUrl, name, privateKey, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, job)
         {
 
         }
@@ -111,10 +111,9 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <param name="restApiUrl">Api url</param>
         /// <param name="algorithm">The algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
-        /// <param name="aggregator">Consolidate ticks</param>
         /// <param name="job">The live job packet</param>
         public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
-            IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
+            IAlgorithm algorithm, IOrderProvider orderProvider, LiveNodePacket job)
             : base(MarketName)
         {
             Initialize(
@@ -124,7 +123,6 @@ namespace QuantConnect.Brokerages.Coinbase
                 restApiUrl: restApiUrl,
                 algorithm: algorithm,
                 orderProvider: orderProvider,
-                aggregator: aggregator,
                 job: job
             );
         }
@@ -137,10 +135,9 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
-        /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
         protected void Initialize(string webSocketUrl, string name, string privateKey, string restApiUrl,
-            IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
+            IAlgorithm algorithm, IOrderProvider orderProvider, LiveNodePacket job)
         {
             if (IsInitialized)
             {
@@ -153,7 +150,15 @@ namespace QuantConnect.Brokerages.Coinbase
 
             _job = job;
             _algorithm = algorithm;
-            _aggregator = aggregator;
+
+            _aggregator = Composer.Instance.GetPart<IDataAggregator>();
+            if (_aggregator == null)
+            {
+                // toolbox downloader case
+                var aggregatorName = Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager");
+                Log.Trace($"CoinbaseBrokerage.Initialize(): found no data aggregator instance, creating {aggregatorName}");
+                _aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(aggregatorName);
+            }
             _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(MarketName);
             _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, name, privateKey, restApiUrl);
             OrderProvider = orderProvider;

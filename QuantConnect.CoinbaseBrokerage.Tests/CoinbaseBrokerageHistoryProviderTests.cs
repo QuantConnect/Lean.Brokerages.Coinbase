@@ -24,7 +24,6 @@ using QuantConnect.Securities;
 using QuantConnect.Data.Market;
 using System.Collections.Generic;
 using QuantConnect.Configuration;
-using QuantConnect.Lean.Engine.DataFeeds;
 
 namespace QuantConnect.Brokerages.Coinbase.Tests
 {
@@ -40,7 +39,6 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 Config.Get("coinbase-api-private-key"),
                 Config.Get("coinbase-rest-api", "https://api.coinbase.com"),
                 null,
-                new AggregationManager(),
                 null);
 
             var now = DateTime.UtcNow;
