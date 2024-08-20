@@ -82,14 +82,14 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             algorithm.Setup(a => a.Portfolio).Returns(new SecurityPortfolioManager(securityManager, transactions, algorithmSettings));
             algorithm.Setup(a => a.Securities).Returns(securityManager);
 
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiSecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-key");
+            var privateKey = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
             var webSocketUrl = Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com");
 
-            _api = new CoinbaseApi(SymbolMapper, null, apiKey, apiSecret, restApiUrl);
+            _api = new CoinbaseApi(SymbolMapper, null, name, privateKey, restApiUrl);
 
-            return new CoinbaseBrokerage(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm.Object, orderProvider, new AggregationManager(), null);
+            return new CoinbaseBrokerage(webSocketUrl, name, privateKey, restApiUrl, algorithm.Object, orderProvider, new AggregationManager(), null);
         }
 
         /// <summary>

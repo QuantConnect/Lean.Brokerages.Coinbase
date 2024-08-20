@@ -69,8 +69,8 @@ namespace QuantConnect.Brokerages.Coinbase
         public override IBrokerage CreateBrokerage(Packets.LiveNodePacket job, IAlgorithm algorithm)
         {
             var errors = new List<string>();
-            var apiKey = Read<string>(job.BrokerageData, "coinbase-api-key", errors);
-            var apiSecret = Read<string>(job.BrokerageData, "coinbase-api-secret", errors);
+            var name = Read<string>(job.BrokerageData, "coinbase-api-key", errors);
+            var privateKey = Read<string>(job.BrokerageData, "coinbase-api-secret", errors);
             var apiUrl = Read<string>(job.BrokerageData, "coinbase-rest-api", errors);
             var wsUrl = Read<string>(job.BrokerageData, "coinbase-url", errors);
 
@@ -84,7 +84,7 @@ namespace QuantConnect.Brokerages.Coinbase
                 Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
                 forceTypeNameOnExisting: false);
 
-            var brokerage = new CoinbaseBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, aggregator, job);
+            var brokerage = new CoinbaseBrokerage(wsUrl, name, privateKey, apiUrl, algorithm, aggregator, job);
 
             // Add the brokerage to the composer to ensure its accessible to the live data feed.
             Composer.Instance.AddPart<IDataQueueHandler>(brokerage);

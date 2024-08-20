@@ -76,8 +76,8 @@ namespace QuantConnect.Brokerages.Coinbase
 
             Initialize(
                 webSocketUrl: job.BrokerageData["coinbase-url"],
-                apiKey: job.BrokerageData["coinbase-api-key"],
-                apiSecret: job.BrokerageData["coinbase-api-secret"],
+                name: job.BrokerageData["coinbase-api-key"],
+                privateKey: job.BrokerageData["coinbase-api-secret"],
                 restApiUrl: job.BrokerageData["coinbase-rest-api"],
                 algorithm: null,
                 orderProvider: null,

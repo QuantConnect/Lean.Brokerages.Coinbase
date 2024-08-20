@@ -68,11 +68,11 @@ public class CoinbaseApi : IDisposable
     private ISecurityProvider SecurityProvider { get; }
 
     public CoinbaseApi(ISymbolMapper symbolMapper, ISecurityProvider securityProvider,
-        string apiKey, string apiKeySecret, string restApiUrl)
+        string name, string privateKey, string restApiUrl)
     {
         SymbolMapper = symbolMapper;
         SecurityProvider = securityProvider;
-        _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, maxGateLimitOccurrences);
+        _apiClient = new CoinbaseApiClient(name, privateKey, restApiUrl, maxGateLimitOccurrences);
     }
 
     /// <summary>

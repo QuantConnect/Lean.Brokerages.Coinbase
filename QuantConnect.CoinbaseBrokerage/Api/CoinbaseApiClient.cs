@@ -17,11 +17,9 @@ using Jose;
 using System;
 using RestSharp;
 using System.Net;
-using System.Text;
 using System.Linq;
 using QuantConnect.Util;
 using System.Diagnostics;
-using System.Globalization;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
@@ -38,11 +36,25 @@ public class CoinbaseApiClient : IDisposable
     /// Provides a thread-safe random number generator instance.
     /// </summary>
     private readonly static Random _random = new Random();
-    private readonly string _apiKey;
+
+    /// <summary>
+    /// Stores the CDP API key name used for authenticating requests.
+    /// </summary>
+    /// <remarks>
+    /// This field holds the API key name, which is essential for identifying and authenticating 
+    /// API requests made to Coinbase's services. The key is provided during the initialization 
+    /// of the <see cref="CoinbaseApiClient"/>.
+    /// </remarks>
+    private readonly string _name;
 
     /// <summary>
     /// Stores the parsed Coinbase private key in a suitable format.
     /// </summary>
+    /// <remarks>
+    /// This field contains the private key associated with the CDP API key, parsed from its 
+    /// original format (typically Base64). It is used for signing requests to ensure secure 
+    /// communication with Coinbase's API.
+    /// </remarks>
     private readonly string _parsedCbPrivateKey;
 
     /// <summary>
@@ -61,24 +73,24 @@ public class CoinbaseApiClient : IDisposable
     private static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CoinbaseApiClient"/> class with the specified API key, 
-    /// API key secret, REST API URL, and maximum requests per second.
+    /// Initializes a new instance of the <see cref="CoinbaseApiClient"/> class with the specified CDP API keys, 
+    /// REST API URL, and maximum requests per second.
     /// </summary>
-    /// <param name="apiKey">The API key required for authenticating requests.</param>
-    /// <param name="apiKeySecret">The API key secret used to sign requests. This will be parsed into a usable format.</param>
+    /// <param name="name">The CDP API key required for authenticating requests.</param>
+    /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
     /// <param name="restApiUrl">The base URL of the Coinbase REST API.</param>
-    /// <param name="maxRequestsPerSecond">The maximum number of requests that can be sent to the API per second.</param>
+    /// <param name = "maxRequestsPerSecond" > The maximum number of requests that can be sent to the API per second.</param>
     /// <remarks>
-    /// This constructor sets up the Coinbase API client by initializing the API key, parsing the private key, 
+    /// This constructor sets up the Coinbase API client by initializing the CDP API key, parsing the private key, 
     /// configuring the REST client with the provided API URL, and setting up a rate limiter to ensure that 
     /// requests do not exceed the specified maximum rate. The <see cref="RateGate"/> helps prevent the client 
     /// from hitting rate limits imposed by the API.
     /// </remarks>
-    public CoinbaseApiClient(string apiKey, string apiKeySecret, string restApiUrl, int maxRequestsPerSecond)
+    public CoinbaseApiClient(string name, string privateKey, string restApiUrl, int maxRequestsPerSecond)
     {
-        _apiKey = apiKey;
+        _name = name;
         _restClient = new RestClient(restApiUrl);
-        _parsedCbPrivateKey = ParseKey(apiKeySecret);
+        _parsedCbPrivateKey = ParseKey(privateKey);
         _rateGate = new RateGate(maxRequestsPerSecond, Time.OneSecond);
     }
 
@@ -93,9 +105,9 @@ public class CoinbaseApiClient : IDisposable
     private void AuthenticateRequest(IRestRequest request)
     {
         var uri = _restClient.BuildUri(request);
-        var generatedJWTToken = GenerateRestToken(_apiKey, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
+        var generatedJWTToken = GenerateRestToken(_name, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
 
-        if (!IsTokenValid(generatedJWTToken, _apiKey, _parsedCbPrivateKey))
+        if (!IsTokenValid(generatedJWTToken, _name, _parsedCbPrivateKey))
         {
             throw new InvalidOperationException("The generated JWT token is invalid. Authentication failed.");
         }
@@ -137,19 +149,19 @@ public class CoinbaseApiClient : IDisposable
     /// <returns>A signed JWT token as a string.</returns>
     public string GenerateWebSocketToken()
     {
-        return GenerateToken(_apiKey, _parsedCbPrivateKey);
+        return GenerateToken(_name, _parsedCbPrivateKey);
     }
 
     /// <summary>
     /// Generates a JWT token for REST API requests.
     /// </summary>
     /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
-    /// <param name="secret">The ECDsa private key in Base64 format used to sign the token.</param>
+    /// <param name="privateKey">The ECDsa private key in Base64 format used to sign the token.</param>
     /// <param name="uri">The URI to include in the token payload.</param>
     /// <returns>A signed JWT token as a string.</returns>
-    private static string GenerateRestToken(string name, string secret, string uri)
+    private static string GenerateRestToken(string name, string privateKey, string uri)
     {
-        return GenerateToken(name, secret, uri);
+        return GenerateToken(name, privateKey, uri);
     }
 
     /// <summary>
@@ -165,7 +177,7 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     private static string GenerateToken(string name, string privateKey, string uri = null)
     {
-        var privateKeyBytes = Convert.FromBase64String(privateKey); // Assuming PEM is base64 encoded
+        var privateKeyBytes = Convert.FromBase64String(privateKey);
         using var key = ECDsa.Create();
         key.ImportECPrivateKey(privateKeyBytes, out _);
         var utcNow = DateTime.UtcNow;
@@ -201,7 +213,7 @@ public class CoinbaseApiClient : IDisposable
     /// </summary>
     /// <param name="token">The JWT token to be validated.</param>
     /// <param name="tokenId">The unique identifier for the ECDsa security key.</param>
-    /// <param name="secret">The ECDsa private key in Base64 format used to validate the token's signature.</param>
+    /// <param name="parsedPrivateKey">The ECDsa private key in Base64 format used to validate the token's signature.</param>
     /// <returns>
     /// <c>true</c> if the token is successfully validated; otherwise, <c>false</c>.
     /// </returns>
@@ -209,13 +221,13 @@ public class CoinbaseApiClient : IDisposable
     /// This method is useful for verifying the authenticity of JWT tokens using ECDsa keys. 
     /// It ensures that the token's signature matches the expected signature derived from the provided secret.
     /// </remarks>
-    private static bool IsTokenValid(string token, string tokenId, string secret)
+    private static bool IsTokenValid(string token, string tokenId, string parsedPrivateKey)
     {
         if (token == null)
             return false;
 
         var key = ECDsa.Create();
-        key?.ImportECPrivateKey(Convert.FromBase64String(secret), out _);
+        key?.ImportECPrivateKey(Convert.FromBase64String(parsedPrivateKey), out _);
 
         var securityKey = new ECDsaSecurityKey(key) { KeyId = tokenId };
 

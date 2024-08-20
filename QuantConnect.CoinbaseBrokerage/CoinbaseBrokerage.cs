@@ -89,15 +89,15 @@ namespace QuantConnect.Brokerages.Coinbase
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with set of parameters.
         /// </summary>
         /// <param name="webSocketUrl">WebSockets url</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="restApiUrl">api url</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
         /// <param name="aggregator">consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public CoinbaseBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+        public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
             IAlgorithm algorithm, IDataAggregator aggregator, LiveNodePacket job)
-            : this(webSocketUrl, apiKey, apiSecret, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, aggregator, job)
+            : this(webSocketUrl, name, privateKey, restApiUrl, algorithm, algorithm?.Portfolio?.Transactions, aggregator, job)
         {
 
         }
@@ -106,21 +106,21 @@ namespace QuantConnect.Brokerages.Coinbase
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with set of parameters.
         /// </summary>
         /// <param name="webSocketUrl">WebSockets url</param>
-        /// <param name="apiKey">Api key</param>
-        /// <param name="apiSecret">Api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="restApiUrl">Api url</param>
         /// <param name="algorithm">The algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
         /// <param name="aggregator">Consolidate ticks</param>
         /// <param name="job">The live job packet</param>
-        public CoinbaseBrokerage(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+        public CoinbaseBrokerage(string webSocketUrl, string name, string privateKey, string restApiUrl,
             IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
             : base(MarketName)
         {
             Initialize(
                 webSocketUrl: webSocketUrl,
-                apiKey: apiKey,
-                apiSecret: apiSecret,
+                name: name,
+                privateKey: privateKey,
                 restApiUrl: restApiUrl,
                 algorithm: algorithm,
                 orderProvider: orderProvider,
@@ -133,13 +133,13 @@ namespace QuantConnect.Brokerages.Coinbase
         /// Initialize the instance of this class
         /// </summary>
         /// <param name="webSocketUrl">The web socket base url</param>
-        /// <param name="apiKey">api key</param>
-        /// <param name="apiSecret">api secret</param>
+        /// <param name="name">The CDP API key required for authenticating requests.</param>
+        /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
         /// <param name="algorithm">the algorithm instance is required to retrieve account type</param>
         /// <param name="orderProvider">The order provider</param>
         /// <param name="aggregator">the aggregator for consolidating ticks</param>
         /// <param name="job">The live job packet</param>
-        protected void Initialize(string webSocketUrl, string apiKey, string apiSecret, string restApiUrl,
+        protected void Initialize(string webSocketUrl, string name, string privateKey, string restApiUrl,
             IAlgorithm algorithm, IOrderProvider orderProvider, IDataAggregator aggregator, LiveNodePacket job)
         {
             if (IsInitialized)
@@ -149,13 +149,13 @@ namespace QuantConnect.Brokerages.Coinbase
 
             ValidateSubscription();
 
-            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, apiKey, apiSecret);
+            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, name, privateKey);
 
             _job = job;
             _algorithm = algorithm;
             _aggregator = aggregator;
             _symbolMapper = new SymbolPropertiesDatabaseSymbolMapper(MarketName);
-            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, apiKey, apiSecret, restApiUrl);
+            _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, name, privateKey, restApiUrl);
             OrderProvider = orderProvider;
 
             SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()

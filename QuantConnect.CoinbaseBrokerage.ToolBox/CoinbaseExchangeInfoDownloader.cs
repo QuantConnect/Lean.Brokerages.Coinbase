@@ -66,10 +66,10 @@ namespace QuantConnect.Brokerages.Coinbase.ToolBox
         /// <returns></returns>
         private CoinbaseApi CreateCoinbaseApi()
         {
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiSecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-key");
+            var privateKey = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
-            return new CoinbaseApi(null, null, apiKey, apiSecret, restApiUrl);
+            return new CoinbaseApi(null, null, name, privateKey, restApiUrl);
         }
     }
 }

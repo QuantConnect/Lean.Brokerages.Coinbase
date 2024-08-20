@@ -35,19 +35,19 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         [SetUp]
         public void Setup()
         {
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiKeySecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-key");
+            var priavteKey = Config.Get("coinbase-api-secret");
 
-            CoinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
+            CoinbaseApi = CreateCoinbaseApi(name, priavteKey);
         }
 
         [TestCase("", "", typeof(ArgumentOutOfRangeException))]
         [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==\n-----END EC PRIVATE KEY-----\n", typeof(System.Security.Cryptography.CryptographicException))]
-        public void InvalidAuthenticationCredentialsShouldThrowException(string apiKey, string apiKeySecret, Type expectedException)
+        public void InvalidAuthenticationCredentialsShouldThrowException(string name, string privateKey, Type expectedException)
         {
             try
             {
-                var coinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
+                var coinbaseApi = CreateCoinbaseApi(name, privateKey);
 
                 // call random endpoint with incorrect credential
                 Assert.Throws(expectedException, () => coinbaseApi.GetAccounts());
@@ -177,13 +177,13 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         [TestCase("/api/v3/brokerage/orders", "[]", "Bad Request")]
         public void ValidateCoinbaseRestRequestWithWrongBodyParameter(string uriPath, object bodyData, string message)
         {
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiKeySecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-key");
+            var privateKey = Config.Get("coinbase-api-secret");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
             var request = new RestRequest($"{uriPath}", Method.POST);
 
-            var _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, 30);
+            var _apiClient = new CoinbaseApiClient(name, privateKey, restApiUrl, 30);
 
             request.AddJsonBody(bodyData);
 
@@ -206,11 +206,11 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             Assert.AreEqual(errorMessage, response.FailureReason);
         }
 
-        private CoinbaseApi CreateCoinbaseApi(string apiKey, string apiKeySecret)
+        private CoinbaseApi CreateCoinbaseApi(string name, string privateKey)
         {
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
-            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase), null, apiKey, apiKeySecret, restApiUrl);
+            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase), null, name, privateKey, restApiUrl);
         }
     }
 }

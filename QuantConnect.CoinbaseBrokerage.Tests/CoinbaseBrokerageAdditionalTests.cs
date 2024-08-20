@@ -71,12 +71,12 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         {
             var wssUrl = Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiSecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-key");
+            var privateKey = Config.Get("coinbase-api-secret");
             var algorithm = new QCAlgorithm();
             var aggregator = new AggregationManager();
 
-            return new CoinbaseBrokerage(wssUrl, apiKey, apiSecret, restApiUrl, algorithm, aggregator, null);
+            return new CoinbaseBrokerage(wssUrl, name, privateKey, restApiUrl, algorithm, aggregator, null);
         }
     }
 }
