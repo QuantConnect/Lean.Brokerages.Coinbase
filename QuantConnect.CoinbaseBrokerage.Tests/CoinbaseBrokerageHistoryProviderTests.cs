@@ -36,8 +36,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         {
             var brokerage = new CoinbaseBrokerage(
                 Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com"),
-                Config.Get("coinbase-api-key"),
-                Config.Get("coinbase-api-secret"),
+                Config.Get("coinbase-api-name"),
+                Config.Get("coinbase-api-private-key"),
                 Config.Get("coinbase-rest-api", "https://api.coinbase.com"),
                 null,
                 new AggregationManager(),

@@ -35,8 +35,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         [SetUp]
         public void Setup()
         {
-            var name = Config.Get("coinbase-api-key");
-            var priavteKey = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-name");
+            var priavteKey = Config.Get("coinbase-api-private-key");
 
             CoinbaseApi = CreateCoinbaseApi(name, priavteKey);
         }
@@ -177,8 +177,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         [TestCase("/api/v3/brokerage/orders", "[]", "Bad Request")]
         public void ValidateCoinbaseRestRequestWithWrongBodyParameter(string uriPath, object bodyData, string message)
         {
-            var name = Config.Get("coinbase-api-key");
-            var privateKey = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-name");
+            var privateKey = Config.Get("coinbase-api-private-key");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
             var request = new RestRequest($"{uriPath}", Method.POST);
