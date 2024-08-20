@@ -22,8 +22,9 @@ using QuantConnect.Util;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("QuantConnect.Brokerages.Coinbase.Tests")]
 
 namespace QuantConnect.Brokerages.Coinbase.Api;
 
@@ -106,12 +107,6 @@ public class CoinbaseApiClient : IDisposable
     {
         var uri = _restClient.BuildUri(request);
         var generatedJWTToken = GenerateRestToken(_name, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
-
-        if (!IsTokenValid(generatedJWTToken, _name, _parsedCbPrivateKey))
-        {
-            throw new InvalidOperationException("The generated JWT token is invalid. Authentication failed.");
-        }
-
         request.AddOrUpdateHeader("Authorization", "Bearer " + generatedJWTToken);
     }
 
@@ -209,74 +204,6 @@ public class CoinbaseApiClient : IDisposable
     }
 
     /// <summary>
-    /// Validates a JWT token using ECDsa key with the specified token ID and secret.
-    /// </summary>
-    /// <param name="token">The JWT token to be validated.</param>
-    /// <param name="tokenId">The unique identifier for the ECDsa security key.</param>
-    /// <param name="parsedPrivateKey">The ECDsa private key in Base64 format used to validate the token's signature.</param>
-    /// <returns>
-    /// <c>true</c> if the token is successfully validated; otherwise, <c>false</c>.
-    /// </returns>
-    /// <remarks>
-    /// This method is useful for verifying the authenticity of JWT tokens using ECDsa keys. 
-    /// It ensures that the token's signature matches the expected signature derived from the provided secret.
-    /// </remarks>
-    private static bool IsTokenValid(string token, string tokenId, string parsedPrivateKey)
-    {
-        if (token == null)
-            return false;
-
-        var key = ECDsa.Create();
-        key?.ImportECPrivateKey(Convert.FromBase64String(parsedPrivateKey), out _);
-
-        var securityKey = new ECDsaSecurityKey(key) { KeyId = tokenId };
-
-        try
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            tokenHandler.ValidateToken(token, new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = securityKey,
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ClockSkew = TimeSpan.FromSeconds(100),
-                ValidateLifetime = true,
-                LifetimeValidator = CustomLifetimeValidator,
-            }, out var validatedToken);
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Custom validator for checking the token's lifetime.
-    /// </summary>
-    /// <param name="notBefore">The 'Not Before' date/time from the token's claims.</param>
-    /// <param name="expires">The expiration date/time from the token's claims.</param>
-    /// <param name="tokenToValidate">The security token being validated.</param>
-    /// <param name="param">The token validation parameters.</param>
-    /// <returns>
-    /// <c>true</c> if the token is valid based on its expiration time; otherwise, <c>false</c>.
-    /// </returns>
-    /// <remarks>
-    /// This custom lifetime validator ensures that the JWT token has not expired. It compares the 
-    /// token's expiration time against the current UTC time to determine its validity.
-    /// </remarks>
-    private static bool CustomLifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken tokenToValidate, TokenValidationParameters @param)
-    {
-        if (expires != null)
-        {
-            return expires > DateTime.UtcNow;
-        }
-        return false;
-    }
-
-    /// <summary>
     /// Parses a key string by removing the first and last lines and returning the remaining content as a single string.
     /// </summary>
     /// <param name="key">The key string to be parsed. It is expected to have multiple lines, with each line separated by a newline character.</param>
@@ -286,7 +213,7 @@ public class CoinbaseApiClient : IDisposable
     /// It removes the first and last lines, which might contain non-essential information like "BEGIN" and "END" markers, 
     /// and returns the core content of the key.
     /// </remarks>
-    private string ParseKey(string key)
+    internal string ParseKey(string key)
     {
         List<string> keyLines = new List<string>();
         keyLines.AddRange(key.Split('\n', StringSplitOptions.RemoveEmptyEntries));

@@ -20,6 +20,9 @@ using NUnit.Framework;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using QuantConnect.Brokerages.Coinbase.Api;
 using QuantConnect.Brokerages.Coinbase.Models.Enums;
 using QuantConnect.Brokerages.Coinbase.Models.WebSocket;
@@ -204,6 +207,90 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
 
             Assert.IsFalse(response.Success);
             Assert.AreEqual(errorMessage, response.FailureReason);
+        }
+
+        [Test]
+        public void ValidateGenerateWebSocketJWTToken()
+        {
+            var name = Config.Get("coinbase-api-name");
+            var privateKey = Config.Get("coinbase-api-private-key");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
+
+            var _apiClient = new CoinbaseApiClient(name, privateKey, restApiUrl, 30);
+
+            var generateWebSocketJWTToken = _apiClient.GenerateWebSocketToken();
+
+            var parsedPrivateKey = _apiClient.ParseKey(privateKey);
+
+            Assert.IsTrue(IsTokenValid(generateWebSocketJWTToken, name, parsedPrivateKey));
+        }
+
+        /// <summary>
+        /// Validates a JWT token using ECDsa key with the specified token ID and secret.
+        /// </summary>
+        /// <param name="token">The JWT token to be validated.</param>
+        /// <param name="tokenId">The unique identifier for the ECDsa security key.</param>
+        /// <param name="parsedPrivateKey">The ECDsa private key in Base64 format used to validate the token's signature.</param>
+        /// <returns>
+        /// <c>true</c> if the token is successfully validated; otherwise, <c>false</c>.
+        /// </returns>
+        /// <remarks>
+        /// This method is useful for verifying the authenticity of JWT tokens using ECDsa keys. 
+        /// It ensures that the token's signature matches the expected signature derived from the provided secret.
+        /// </remarks>
+        private bool IsTokenValid(string token, string tokenId, string parsedPrivateKey)
+        {
+            if (token == null)
+                return false;
+
+            var key = ECDsa.Create();
+            key?.ImportECPrivateKey(Convert.FromBase64String(parsedPrivateKey), out _);
+
+            var securityKey = new ECDsaSecurityKey(key) { KeyId = tokenId };
+
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = securityKey,
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.FromSeconds(100),
+                    ValidateLifetime = true,
+                    LifetimeValidator = CustomLifetimeValidator,
+                }, out var validatedToken);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Custom validator for checking the token's lifetime.
+        /// </summary>
+        /// <param name="notBefore">The 'Not Before' date/time from the token's claims.</param>
+        /// <param name="expires">The expiration date/time from the token's claims.</param>
+        /// <param name="tokenToValidate">The security token being validated.</param>
+        /// <param name="param">The token validation parameters.</param>
+        /// <returns>
+        /// <c>true</c> if the token is valid based on its expiration time; otherwise, <c>false</c>.
+        /// </returns>
+        /// <remarks>
+        /// This custom lifetime validator ensures that the JWT token has not expired. It compares the 
+        /// token's expiration time against the current UTC time to determine its validity.
+        /// </remarks>
+        private static bool CustomLifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken tokenToValidate, TokenValidationParameters @param)
+        {
+            if (expires != null)
+            {
+                return expires > DateTime.UtcNow;
+            }
+            return false;
         }
 
         private CoinbaseApi CreateCoinbaseApi(string name, string privateKey)
