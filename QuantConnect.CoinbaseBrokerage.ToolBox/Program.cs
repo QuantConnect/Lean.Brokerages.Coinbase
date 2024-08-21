@@ -34,7 +34,7 @@ namespace QuantConnect.Brokerages.Coinbase.ToolBox
                 PrintMessageAndExit(1, "ERROR: --app value is required");
             }
 
-            if(string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-key")) || string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-secret")))
+            if(string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-name")) || string.IsNullOrEmpty(Config.GetValue<string>("coinbase-api-private-key")))
             {
                 PrintMessageAndExit(1, "ERROR: check configs: 'coinbase-api-key' or 'coinbase-api-secret'");
             }

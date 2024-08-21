@@ -66,4 +66,11 @@ public enum OrderStatus
     /// </summary>
     [EnumMember(Value = "FAILED")]
     Failed,
+
+    /// <summary>
+    /// The order has been marked for cancellation, but the cancellation process has not yet completed.
+    /// This status indicates that the cancellation request is in a queue and will be processed shortly.
+    /// </summary>
+    [EnumMember(Value = "CANCEL_QUEUED")]
+    CancelQueued,
 }

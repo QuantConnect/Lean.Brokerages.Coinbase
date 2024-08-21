@@ -37,8 +37,8 @@ namespace QuantConnect.Brokerages.Coinbase
         /// </remarks>
         public override Dictionary<string, string> BrokerageData => new Dictionary<string, string>
         {
-            { "coinbase-api-key", Config.Get("coinbase-api-key")},
-            { "coinbase-api-secret", Config.Get("coinbase-api-secret")},
+            { "coinbase-api-name", Config.Get("coinbase-api-name")},
+            { "coinbase-api-private-key", Config.Get("coinbase-api-private-key")},
             // Represents the configuration setting for the Coinbase API URL.
             { "coinbase-rest-api", Config.Get("coinbase-rest-api", "https://api.coinbase.com")},
             // Represents the configuration setting for the Coinbase WebSocket URL.
@@ -69,8 +69,8 @@ namespace QuantConnect.Brokerages.Coinbase
         public override IBrokerage CreateBrokerage(Packets.LiveNodePacket job, IAlgorithm algorithm)
         {
             var errors = new List<string>();
-            var apiKey = Read<string>(job.BrokerageData, "coinbase-api-key", errors);
-            var apiSecret = Read<string>(job.BrokerageData, "coinbase-api-secret", errors);
+            var name = Read<string>(job.BrokerageData, "coinbase-api-name", errors);
+            var privateKey = Read<string>(job.BrokerageData, "coinbase-api-private-key", errors);
             var apiUrl = Read<string>(job.BrokerageData, "coinbase-rest-api", errors);
             var wsUrl = Read<string>(job.BrokerageData, "coinbase-url", errors);
 
@@ -80,11 +80,7 @@ namespace QuantConnect.Brokerages.Coinbase
                 throw new ArgumentException(string.Join(Environment.NewLine, errors));
             }
 
-            var aggregator = Composer.Instance.GetExportedValueByTypeName<IDataAggregator>(
-                Config.Get("data-aggregator", "QuantConnect.Lean.Engine.DataFeeds.AggregationManager"),
-                forceTypeNameOnExisting: false);
-
-            var brokerage = new CoinbaseBrokerage(wsUrl, apiKey, apiSecret, apiUrl, algorithm, aggregator, job);
+            var brokerage = new CoinbaseBrokerage(wsUrl, name, privateKey, apiUrl, algorithm, job);
 
             // Add the brokerage to the composer to ensure its accessible to the live data feed.
             Composer.Instance.AddPart<IDataQueueHandler>(brokerage);

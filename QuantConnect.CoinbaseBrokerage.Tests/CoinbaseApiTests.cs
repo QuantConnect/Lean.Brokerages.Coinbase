@@ -20,6 +20,9 @@ using NUnit.Framework;
 using Newtonsoft.Json.Linq;
 using QuantConnect.Configuration;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using QuantConnect.Brokerages.Coinbase.Api;
 using QuantConnect.Brokerages.Coinbase.Models.Enums;
 using QuantConnect.Brokerages.Coinbase.Models.WebSocket;
@@ -35,30 +38,38 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
         [SetUp]
         public void Setup()
         {
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiKeySecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-name");
+            var priavteKey = Config.Get("coinbase-api-private-key");
 
-            CoinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
+            CoinbaseApi = CreateCoinbaseApi(name, priavteKey);
         }
 
-        [TestCase("", "")]
-        [TestCase("1", "2")]
-        public void InvalidAuthenticationCredentialsShouldThrowException(string apiKey, string apiKeySecret)
+        [TestCase("", "", typeof(ArgumentOutOfRangeException))]
+        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==\n-----END EC PRIVATE KEY-----\n", typeof(CryptographicException))]
+        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "MHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==", typeof(CryptographicException))]
+        public void InvalidAuthenticationCredentialsShouldThrowException(string name, string privateKey, Type expectedException)
         {
-            var coinbaseApi = CreateCoinbaseApi(apiKey, apiKeySecret);
+            try
+            {
+                var coinbaseApi = CreateCoinbaseApi(name, privateKey);
 
-            // call random endpoint with incorrect credential
-            Assert.Throws<Exception>(() => coinbaseApi.GetAccounts());
+                // call random endpoint with incorrect credential
+                Assert.Throws(expectedException, () => coinbaseApi.GetAccounts());
+            }
+            catch (Exception ex)
+            {
+                Assert.IsInstanceOf(expectedException, ex);
+            }
         }
 
-        [Test] 
-        public void GetListAccounts() 
+        [Test]
+        public void GetListAccounts()
         {
             var accounts = CoinbaseApi.GetAccounts();
 
             Assert.Greater(accounts.Count(), 0);
 
-            foreach(var account in accounts)
+            foreach (var account in accounts)
             {
                 Assert.IsTrue(account.Active);
                 Assert.IsNotEmpty(account.Name);
@@ -161,22 +172,22 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 Assert.GreaterOrEqual(tick.NewQuantity, 0);
                 Assert.GreaterOrEqual(tick.PriceLevel, 0);
                 Assert.IsInstanceOf<CoinbaseLevel2UpdateSide>(tick.Side);
-            }            
+            }
         }
 
-        [TestCase("/api/v3/brokerage/orders", null, "Unauthorized")]
-        [TestCase("/api/v3/brokerage/orders", "", "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", null, "Bad Request")]
+        [TestCase("/api/v3/brokerage/orders", "", "Bad Request")]
         [TestCase("/api/v3/brokerage/orders", "{null}", "Bad Request")]
-        [TestCase("/api/v3/brokerage/orders", "[]", "Unauthorized")]
+        [TestCase("/api/v3/brokerage/orders", "[]", "Bad Request")]
         public void ValidateCoinbaseRestRequestWithWrongBodyParameter(string uriPath, object bodyData, string message)
         {
-            var apiKey = Config.Get("coinbase-api-key");
-            var apiKeySecret = Config.Get("coinbase-api-secret");
+            var name = Config.Get("coinbase-api-name");
+            var privateKey = Config.Get("coinbase-api-private-key");
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
             var request = new RestRequest($"{uriPath}", Method.POST);
 
-            var _apiClient = new CoinbaseApiClient(apiKey, apiKeySecret, restApiUrl, 30);
+            var _apiClient = new CoinbaseApiClient(name, privateKey, restApiUrl, 30);
 
             request.AddJsonBody(bodyData);
 
@@ -199,11 +210,95 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             Assert.AreEqual(errorMessage, response.FailureReason);
         }
 
-        private CoinbaseApi CreateCoinbaseApi(string apiKey, string apiKeySecret)
+        [Test]
+        public void ValidateGenerateWebSocketJWTToken()
+        {
+            var name = Config.Get("coinbase-api-name");
+            var privateKey = Config.Get("coinbase-api-private-key");
+            var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
+
+            var _apiClient = new CoinbaseApiClient(name, privateKey, restApiUrl, 30);
+
+            var generateWebSocketJWTToken = _apiClient.GenerateWebSocketToken();
+
+            var parsedPrivateKey = _apiClient.ParseKey(privateKey);
+
+            Assert.IsTrue(IsTokenValid(generateWebSocketJWTToken, name, parsedPrivateKey));
+        }
+
+        /// <summary>
+        /// Validates a JWT token using ECDsa key with the specified token ID and secret.
+        /// </summary>
+        /// <param name="token">The JWT token to be validated.</param>
+        /// <param name="tokenId">The unique identifier for the ECDsa security key.</param>
+        /// <param name="parsedPrivateKey">The ECDsa private key in Base64 format used to validate the token's signature.</param>
+        /// <returns>
+        /// <c>true</c> if the token is successfully validated; otherwise, <c>false</c>.
+        /// </returns>
+        /// <remarks>
+        /// This method is useful for verifying the authenticity of JWT tokens using ECDsa keys. 
+        /// It ensures that the token's signature matches the expected signature derived from the provided secret.
+        /// </remarks>
+        private bool IsTokenValid(string token, string tokenId, string parsedPrivateKey)
+        {
+            if (token == null)
+                return false;
+
+            var key = ECDsa.Create();
+            key?.ImportECPrivateKey(Convert.FromBase64String(parsedPrivateKey), out _);
+
+            var securityKey = new ECDsaSecurityKey(key) { KeyId = tokenId };
+
+            try
+            {
+                var tokenHandler = new JwtSecurityTokenHandler();
+                tokenHandler.ValidateToken(token, new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = securityKey,
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.FromSeconds(100),
+                    ValidateLifetime = true,
+                    LifetimeValidator = CustomLifetimeValidator,
+                }, out var validatedToken);
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Custom validator for checking the token's lifetime.
+        /// </summary>
+        /// <param name="notBefore">The 'Not Before' date/time from the token's claims.</param>
+        /// <param name="expires">The expiration date/time from the token's claims.</param>
+        /// <param name="tokenToValidate">The security token being validated.</param>
+        /// <param name="param">The token validation parameters.</param>
+        /// <returns>
+        /// <c>true</c> if the token is valid based on its expiration time; otherwise, <c>false</c>.
+        /// </returns>
+        /// <remarks>
+        /// This custom lifetime validator ensures that the JWT token has not expired. It compares the 
+        /// token's expiration time against the current UTC time to determine its validity.
+        /// </remarks>
+        private static bool CustomLifetimeValidator(DateTime? notBefore, DateTime? expires, SecurityToken tokenToValidate, TokenValidationParameters @param)
+        {
+            if (expires != null)
+            {
+                return expires > DateTime.UtcNow;
+            }
+            return false;
+        }
+
+        private CoinbaseApi CreateCoinbaseApi(string name, string privateKey)
         {
             var restApiUrl = Config.Get("coinbase-rest-api", "https://api.coinbase.com");
 
-            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase), null, apiKey, apiKeySecret, restApiUrl);
+            return new CoinbaseApi(new SymbolPropertiesDatabaseSymbolMapper(Market.Coinbase), null, name, privateKey, restApiUrl);
         }
     }
 }

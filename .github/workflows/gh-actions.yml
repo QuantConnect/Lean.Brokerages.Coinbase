@@ -8,8 +8,8 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     env:
-        QC_COINBASE_API_SECRET: ${{ secrets.QC_COINBASE_API_SECRET }}
-        QC_COINBASE_API_KEY: ${{ secrets.QC_COINBASE_API_KEY }}
+        QC_COINBASE_API_NAME: ${{ secrets.QC_COINBASE_API_NAME }}
+        QC_COINBASE_API_PRIVATE_KEY: ${{ secrets.QC_COINBASE_API_PRIVATE_KEY }}
         QC_COINBASE_URL: ${{ secrets.QC_COINBASE_URL }}
         QC_COINBASE_REST_API: ${{ secrets.QC_COINBASE_REST_API }}
         QC_JOB_USER_ID: ${{ secrets.JOB_USER_ID }}

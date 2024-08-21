@@ -100,7 +100,10 @@ namespace QuantConnect.Brokerages.Coinbase
         {
             var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
 
-            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
+            if (Log.DebuggingEnabled)
+            {
+                Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}"); 
+            }
 
             try
             {
@@ -347,7 +350,7 @@ namespace QuantConnect.Brokerages.Coinbase
                 {
                     continue;
                 }
-                _tradeIds[symbol] = new (trade.TradeId, trade.Time.UtcDateTime);
+                _tradeIds[symbol] = new(trade.TradeId, trade.Time.UtcDateTime);
 
                 var tick = new Tick
                 {
@@ -507,10 +510,10 @@ namespace QuantConnect.Brokerages.Coinbase
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
 
-            var (apiKey, timestamp, signature) = _coinbaseApi.GetWebSocketSignatures(channel, productIds);
+            var jwtToken = _coinbaseApi.GetWebSocketJWTToken();
 
             var json = JsonConvert.SerializeObject(
-                new CoinbaseSubscriptionMessage(apiKey, channel, productIds, signature, timestamp, subscriptionType));
+                new CoinbaseSubscriptionMessage(channel, productIds, jwtToken, subscriptionType));
 
             Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}:send json message: " + json);
 

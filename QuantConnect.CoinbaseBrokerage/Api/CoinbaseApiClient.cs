@@ -13,16 +13,18 @@
  * limitations under the License.
 */
 
+using Jose;
 using System;
 using RestSharp;
 using System.Net;
-using System.Text;
 using System.Linq;
 using QuantConnect.Util;
 using System.Diagnostics;
-using System.Globalization;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("QuantConnect.Brokerages.Coinbase.Tests")]
 
 namespace QuantConnect.Brokerages.Coinbase.Api;
 
@@ -31,17 +33,64 @@ namespace QuantConnect.Brokerages.Coinbase.Api;
 /// </summary>
 public class CoinbaseApiClient : IDisposable
 {
-    private readonly string _apiKey;
-    private readonly HMACSHA256 _hmacSha256;
+    /// <summary>
+    /// Provides a thread-safe random number generator instance.
+    /// </summary>
+    private readonly static Random _random = new Random();
+
+    /// <summary>
+    /// Stores the CDP API key name used for authenticating requests.
+    /// </summary>
+    /// <remarks>
+    /// This field holds the API key name, which is essential for identifying and authenticating 
+    /// API requests made to Coinbase's services. The key is provided during the initialization 
+    /// of the <see cref="CoinbaseApiClient"/>.
+    /// </remarks>
+    private readonly string _name;
+
+    /// <summary>
+    /// Represents an ECDSA private key used for cryptographic operations.
+    /// The private key is initialized from a base64-encoded string and imported into an ECDSA instance.
+    /// </summary>
+    private readonly ECDsa _privateKey;
+
+    /// <summary>
+    /// Represents the REST client used to send HTTP requests to the Coinbase API.
+    /// </summary>
     private readonly RestClient _restClient;
+
+    /// <summary>
+    /// Manages rate limiting for outbound API requests.
+    /// </summary>
     private readonly RateGate _rateGate;
 
-    public CoinbaseApiClient(string apiKey, string apiKeySecret, string restApiUrl, int maxRequestsPerSecond)
+    /// <summary>
+    /// Represents the Unix epoch time, which is the starting point for Unix time calculation.
+    /// </summary>
+    private static readonly DateTime EpochTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CoinbaseApiClient"/> class with the specified CDP API keys, 
+    /// REST API URL, and maximum requests per second.
+    /// </summary>
+    /// <param name="name">The CDP API key required for authenticating requests.</param>
+    /// <param name="privateKey">The CDP API key secret used to sign requests. This will be parsed into a usable format.</param>
+    /// <param name="restApiUrl">The base URL of the Coinbase REST API.</param>
+    /// <param name = "maxRequestsPerSecond" > The maximum number of requests that can be sent to the API per second.</param>
+    /// <remarks>
+    /// This constructor sets up the Coinbase API client by initializing the CDP API key, parsing the private key, 
+    /// configuring the REST client with the provided API URL, and setting up a rate limiter to ensure that 
+    /// requests do not exceed the specified maximum rate. The <see cref="RateGate"/> helps prevent the client 
+    /// from hitting rate limits imposed by the API.
+    /// </remarks>
+    public CoinbaseApiClient(string name, string privateKey, string restApiUrl, int maxRequestsPerSecond)
     {
-        _apiKey = apiKey;
+        _name = name;
         _restClient = new RestClient(restApiUrl);
-        _hmacSha256 = new HMACSHA256(Encoding.UTF8.GetBytes(apiKeySecret));
         _rateGate = new RateGate(maxRequestsPerSecond, Time.OneSecond);
+
+        _privateKey = ECDsa.Create();
+        _privateKey.ImportECPrivateKey(Convert.FromBase64String(ParseKey(privateKey)), out _);
     }
 
     /// <summary>
@@ -54,17 +103,9 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     private void AuthenticateRequest(IRestRequest request)
     {
-        var body = request.Parameters.SingleOrDefault(b => b.Type == ParameterType.RequestBody);
-
-        var urlPath = _restClient.BuildUri(request).AbsolutePath;
-
-        var timestamp = GetNonce();
-
-        var signature = GetSign(timestamp, request.Method.ToString(), urlPath, body?.Value?.ToString() ?? string.Empty);
-
-        request.AddHeader("CB-ACCESS-KEY", _apiKey);
-        request.AddHeader("CB-ACCESS-SIGN", signature);
-        request.AddHeader("CB-ACCESS-TIMESTAMP", timestamp);
+        var uri = _restClient.BuildUri(request);
+        var generatedJWTToken = GenerateToken($"{request.Method} {uri.Host + uri.AbsolutePath}");
+        request.AddOrUpdateHeader("Authorization", "Bearer " + generatedJWTToken);
     }
 
     /// <summary>
@@ -96,50 +137,88 @@ public class CoinbaseApiClient : IDisposable
     }
 
     /// <summary>
-    /// Generates a signature for a given set of parameters using HMAC-SHA256.
+    /// Generates a JWT token for WebSocket connections.
     /// </summary>
-    /// <param name="timeStamp">The timestamp of the request.</param>
-    /// <param name="httpMethod">The HTTP method used for the request (e.g., GET, POST).</param>
-    /// <param name="urlPath">The URL path of the request.</param>
-    /// <param name="body">The request body.</param>
-    /// <returns>
-    /// A string representation of the generated signature in lowercase hexadecimal format.
-    /// </returns>
-    /// <remarks>
-    /// The signature is computed using the HMAC-SHA256 algorithm and is typically used for authentication and message integrity.
-    /// </remarks>
-    private string GetSign(string timeStamp, string httpMethod, string urlPath, string body)
+    /// <returns>A signed JWT token as a string.</returns>
+    public string GenerateWebSocketToken()
     {
-        var preHash = timeStamp + httpMethod + urlPath + body;
-
-        var sig = _hmacSha256.ComputeHash(Encoding.UTF8.GetBytes(preHash));
-
-        return Convert.ToHexString(sig).ToLowerInvariant();
-    }
-
-    public (string apiKey, string timestamp, string signature) GenerateWebSocketSignature(string channel, ICollection<string> productIds)
-    {
-        var timestamp = GetNonce();
-
-        var products = string.Join(",", productIds ?? Array.Empty<string>());
-
-        var signature = GetSign(timestamp, string.Empty, channel, products);
-
-        return (_apiKey, timestamp, signature);
+        return GenerateToken();
     }
 
     /// <summary>
-    /// Generates a unique nonce based on the current UTC time in Unix timestamp format.
+    /// Generates a JWT token with the specified parameters using ECDsa signing.
+    /// </summary>
+    /// <param name="uri">The URI to include in the token payload. Pass null for WebSocket tokens.</param>
+    /// <returns>A signed JWT token as a string.</returns>
+    /// <remarks>
+    /// This method creates a JWT token with a subject, issuer, and a short expiration time, signed using the ES256 algorithm.
+    /// It also includes a nonce in the token headers to prevent replay attacks.
+    /// </remarks>
+    private string GenerateToken(string uri = null)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        var payload = new Dictionary<string, object>
+         {
+             { "sub", _name },
+             { "iss", "coinbase-cloud" },
+             { "nbf", Convert.ToInt64((utcNow - EpochTime).TotalSeconds) },
+             { "exp", Convert.ToInt64((utcNow.AddMinutes(1) - EpochTime).TotalSeconds) }
+         };
+
+        if (uri != null)
+        {
+            payload.Add("uri", uri);
+        }
+
+        var extraHeaders = new Dictionary<string, object>
+         {
+             { "kid", _name },
+             // add nonce to prevent replay attacks with a random 10 digit number
+             { "nonce", RandomHex() },
+             { "typ", "JWT"}
+         };
+
+        var encodedToken = JWT.Encode(payload, _privateKey, JwsAlgorithm.ES256, extraHeaders);
+
+        return encodedToken;
+    }
+
+    /// <summary>
+    /// Parses a key string by removing the first and last lines and returning the remaining content as a single string.
+    /// </summary>
+    /// <param name="key">The key string to be parsed. It is expected to have multiple lines, with each line separated by a newline character.</param>
+    /// <returns>A string that concatenates the remaining lines after the first and last lines are removed.</returns>
+    /// <remarks>
+    /// This method is useful when handling key formats that typically have headers and footers (e.g., PEM format). 
+    /// It removes the first and last lines, which might contain non-essential information like "BEGIN" and "END" markers, 
+    /// and returns the core content of the key.
+    /// </remarks>
+    internal string ParseKey(string key)
+    {
+        var keyLines = key.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+
+        // Check if the first and last lines are the BEGIN/END markers, and remove them if present
+        if (keyLines.First().Contains("BEGIN") && keyLines.Last().Contains("END"))
+        {
+            keyLines.RemoveAt(0);  // Remove the first line
+            keyLines.RemoveAt(keyLines.Count - 1);  // Remove the last line
+        }
+
+        return string.Join("", keyLines);
+    }
+
+    /// <summary>
+    /// Generates a random hexadecimal string of a fixed length.
     /// </summary>
     /// <returns>
-    /// A string representation of the generated nonce.
+    /// A <see cref="string"/> representing a random hexadecimal value of 10 characters.
     /// </returns>
-    /// <remarks>
-    /// The nonce is used to ensure the uniqueness of each request, typically in the context of security and authentication.
-    /// </remarks>
-    private static string GetNonce()
+    private static string RandomHex()
     {
-        return Time.DateTimeToUnixTimeStamp(DateTime.UtcNow).ToString("F0", CultureInfo.InvariantCulture);
+        byte[] buffer = new byte[10 / 2];
+        _random.NextBytes(buffer);
+        return string.Concat(buffer.Select(x => x.ToString("X2")).ToArray());
     }
 
     /// <summary>
@@ -150,6 +229,7 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     public void Dispose()
     {
-        _hmacSha256.DisposeSafely();
+        _rateGate.Dispose();
+        _privateKey.Dispose();
     }
 }
