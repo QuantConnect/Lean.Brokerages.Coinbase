@@ -1,4 +1,4 @@
-﻿/*
+/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2023 QuantConnect Corporation.
  *
@@ -175,7 +175,7 @@ public class CoinbaseApiClient : IDisposable
          {
              { "kid", _name },
              // add nonce to prevent replay attacks with a random 10 digit number
-             { "nonce", RandomHex(10) },
+             { "nonce", RandomHex() },
              { "typ", "JWT"}
          };
 
