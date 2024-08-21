@@ -206,22 +206,16 @@ public class CoinbaseApiClient : IDisposable
     }
 
     /// <summary>
-    /// Generates a random hexadecimal string of the specified length.
+    /// Generates a random hexadecimal string of a fixed length.
     /// </summary>
-    /// <param name="digits">The number of hexadecimal digits to generate.</param>
-    /// <returns>A string containing a random sequence of hexadecimal characters.</returns>
-    /// <remarks>
-    /// If the specified number of digits is odd, the method will generate one extra random digit
-    /// to ensure the output string has the exact number of requested digits.
-    /// </remarks>
-    private static string RandomHex(int digits)
+    /// <returns>
+    /// A <see cref="string"/> representing a random hexadecimal value of 10 characters.
+    /// </returns>
+    private static string RandomHex()
     {
-        byte[] buffer = new byte[digits / 2];
+        byte[] buffer = new byte[10 / 2];
         _random.NextBytes(buffer);
-        string result = string.Concat(buffer.Select(x => x.ToString("X2")).ToArray());
-        if (digits % 2 == 0)
-            return result;
-        return result + _random.Next(16).ToString("X");
+        return string.Concat(buffer.Select(x => x.ToString("X2")).ToArray());
     }
 
     /// <summary>
