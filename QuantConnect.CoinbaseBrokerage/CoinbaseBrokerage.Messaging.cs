@@ -100,7 +100,10 @@ namespace QuantConnect.Brokerages.Coinbase
         {
             var data = webSocketMessage.Data as WebSocketClientWrapper.TextMessage;
 
-            Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}");
+            if (Log.DebuggingEnabled)
+            {
+                Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: {data.Message}"); 
+            }
 
             try
             {
