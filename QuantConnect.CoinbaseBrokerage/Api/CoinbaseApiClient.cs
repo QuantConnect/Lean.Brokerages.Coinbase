@@ -1,4 +1,4 @@
-/*
+﻿/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2023 QuantConnect Corporation.
  *
@@ -196,11 +196,14 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     internal string ParseKey(string key)
     {
-        List<string> keyLines = new List<string>();
-        keyLines.AddRange(key.Split('\n', StringSplitOptions.RemoveEmptyEntries));
+        var keyLines = key.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-        keyLines.RemoveAt(0);
-        keyLines.RemoveAt(keyLines.Count - 1);
+        // Check if the first and last lines are the BEGIN/END markers, and remove them if present
+        if (keyLines.First().Contains("BEGIN") && keyLines.Last().Contains("END"))
+        {
+            keyLines.RemoveAt(0);  // Remove the first line
+            keyLines.RemoveAt(keyLines.Count - 1);  // Remove the last line
+        }
 
         return string.Join("", keyLines);
     }
