@@ -49,14 +49,10 @@ public class CoinbaseApiClient : IDisposable
     private readonly string _name;
 
     /// <summary>
-    /// Stores the parsed Coinbase private key in a suitable format.
+    /// Represents an ECDSA private key used for cryptographic operations.
+    /// The private key is initialized from a base64-encoded string and imported into an ECDSA instance.
     /// </summary>
-    /// <remarks>
-    /// This field contains the private key associated with the CDP API key, parsed from its 
-    /// original format (typically Base64). It is used for signing requests to ensure secure 
-    /// communication with Coinbase's API.
-    /// </remarks>
-    private readonly string _parsedCbPrivateKey;
+    private readonly ECDsa _privateKey;
 
     /// <summary>
     /// Represents the REST client used to send HTTP requests to the Coinbase API.
@@ -91,8 +87,10 @@ public class CoinbaseApiClient : IDisposable
     {
         _name = name;
         _restClient = new RestClient(restApiUrl);
-        _parsedCbPrivateKey = ParseKey(privateKey);
         _rateGate = new RateGate(maxRequestsPerSecond, Time.OneSecond);
+
+        _privateKey = ECDsa.Create();
+        _privateKey.ImportECPrivateKey(Convert.FromBase64String(ParseKey(privateKey)), out _);
     }
 
     /// <summary>
@@ -106,7 +104,7 @@ public class CoinbaseApiClient : IDisposable
     private void AuthenticateRequest(IRestRequest request)
     {
         var uri = _restClient.BuildUri(request);
-        var generatedJWTToken = GenerateToken(_name, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
+        var generatedJWTToken = GenerateToken($"{request.Method} {uri.Host + uri.AbsolutePath}");
         request.AddOrUpdateHeader("Authorization", "Bearer " + generatedJWTToken);
     }
 
@@ -144,30 +142,25 @@ public class CoinbaseApiClient : IDisposable
     /// <returns>A signed JWT token as a string.</returns>
     public string GenerateWebSocketToken()
     {
-        return GenerateToken(_name, _parsedCbPrivateKey);
+        return GenerateToken();
     }
 
     /// <summary>
     /// Generates a JWT token with the specified parameters using ECDsa signing.
     /// </summary>
-    /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
-    /// <param name="privateKey">The ECDsa private key in Base64 format used to sign the token.</param>
     /// <param name="uri">The URI to include in the token payload. Pass null for WebSocket tokens.</param>
     /// <returns>A signed JWT token as a string.</returns>
     /// <remarks>
     /// This method creates a JWT token with a subject, issuer, and a short expiration time, signed using the ES256 algorithm.
     /// It also includes a nonce in the token headers to prevent replay attacks.
     /// </remarks>
-    private static string GenerateToken(string name, string privateKey, string uri = null)
+    private string GenerateToken(string uri = null)
     {
-        var privateKeyBytes = Convert.FromBase64String(privateKey);
-        using var key = ECDsa.Create();
-        key.ImportECPrivateKey(privateKeyBytes, out _);
         var utcNow = DateTime.UtcNow;
 
         var payload = new Dictionary<string, object>
          {
-             { "sub", name },
+             { "sub", _name },
              { "iss", "coinbase-cloud" },
              { "nbf", Convert.ToInt64((utcNow - EpochTime).TotalSeconds) },
              { "exp", Convert.ToInt64((utcNow.AddMinutes(1) - EpochTime).TotalSeconds) }
@@ -180,13 +173,13 @@ public class CoinbaseApiClient : IDisposable
 
         var extraHeaders = new Dictionary<string, object>
          {
-             { "kid", name },
+             { "kid", _name },
              // add nonce to prevent replay attacks with a random 10 digit number
              { "nonce", RandomHex(10) },
              { "typ", "JWT"}
          };
 
-        var encodedToken = JWT.Encode(payload, key, JwsAlgorithm.ES256, extraHeaders);
+        var encodedToken = JWT.Encode(payload, _privateKey, JwsAlgorithm.ES256, extraHeaders);
 
         return encodedToken;
     }
@@ -240,5 +233,6 @@ public class CoinbaseApiClient : IDisposable
     public void Dispose()
     {
         _rateGate.Dispose();
+        _privateKey.Dispose();
     }
 }
