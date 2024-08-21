@@ -106,7 +106,7 @@ public class CoinbaseApiClient : IDisposable
     private void AuthenticateRequest(IRestRequest request)
     {
         var uri = _restClient.BuildUri(request);
-        var generatedJWTToken = GenerateRestToken(_name, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
+        var generatedJWTToken = GenerateToken(_name, _parsedCbPrivateKey, $"{request.Method} {uri.Host + uri.AbsolutePath}");
         request.AddOrUpdateHeader("Authorization", "Bearer " + generatedJWTToken);
     }
 
@@ -145,18 +145,6 @@ public class CoinbaseApiClient : IDisposable
     public string GenerateWebSocketToken()
     {
         return GenerateToken(_name, _parsedCbPrivateKey);
-    }
-
-    /// <summary>
-    /// Generates a JWT token for REST API requests.
-    /// </summary>
-    /// <param name="name">The name to be used as the subject ("sub") and key identifier ("kid") in the token payload and headers.</param>
-    /// <param name="privateKey">The ECDsa private key in Base64 format used to sign the token.</param>
-    /// <param name="uri">The URI to include in the token payload.</param>
-    /// <returns>A signed JWT token as a string.</returns>
-    private static string GenerateRestToken(string name, string privateKey, string uri)
-    {
-        return GenerateToken(name, privateKey, uri);
     }
 
     /// <summary>
