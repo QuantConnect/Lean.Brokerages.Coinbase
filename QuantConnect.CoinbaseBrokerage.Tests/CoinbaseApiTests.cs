@@ -44,9 +44,9 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             CoinbaseApi = CreateCoinbaseApi(name, priavteKey);
         }
 
-        [TestCase("", "", typeof(ArgumentOutOfRangeException))]
-        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==\n-----END EC PRIVATE KEY-----\n", typeof(CryptographicException))]
-        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "MHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==", typeof(CryptographicException))]
+        [TestCase("", "", typeof(InvalidOperationException))]
+        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "-----BEGIN EC PRIVATE KEY-----\nMHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==\n-----END EC PRIVATE KEY-----\n", typeof(InvalidOperationException))]
+        [TestCase("organizations/2c7dhs-a3a3-4acf-aa0c-f68584f34c37/apiKeys/41090ffa-asd2-4040-815f-afaf63747e35", "MHcCAQEEIPcJGfXYEdLQi0iFj1xvGfPwuRNoeddwuKS4xL2NrlGWpoAoGCCqGSM49\nAwEHoUQDQgAEclN+asd/EhJ3UjOWkHmP/iqGBv5NkNJ75bUq\nVgxS4aU3/djHiIuSf27QasdOFIDGJLmOn7YiQ==", typeof(InvalidOperationException))]
         public void InvalidAuthenticationCredentialsShouldThrowException(string name, string privateKey, Type expectedException)
         {
             try
