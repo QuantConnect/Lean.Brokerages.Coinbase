@@ -224,12 +224,11 @@ public class CoinbaseApiClient : IDisposable
     internal string ParseKey(string key)
     {
         var keyLines = key
-            .Replace("-", "")
-            .Replace("BEGIN EC PRIVATE KEY", "")
-            .Replace("END EC PRIVATE KEY", "")
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+            .Replace("-----BEGIN EC PRIVATE KEY-----", string.Empty)
+            .Replace("-----END EC PRIVATE KEY-----", string.Empty)
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        return string.Join("", keyLines);
+        return string.Join(string.Empty, keyLines);
     }
 
     /// <summary>
