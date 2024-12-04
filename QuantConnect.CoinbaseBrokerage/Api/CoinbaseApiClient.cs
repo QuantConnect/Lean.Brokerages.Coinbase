@@ -89,8 +89,35 @@ public class CoinbaseApiClient : IDisposable
         _restClient = new RestClient(restApiUrl);
         _rateGate = new RateGate(maxRequestsPerSecond, Time.OneSecond);
 
-        _privateKey = ECDsa.Create();
-        _privateKey.ImportECPrivateKey(Convert.FromBase64String(ParseKey(privateKey)), out _);
+        _privateKey = CreateECDsaByPrivateKey(privateKey);
+    }
+
+    /// <summary>
+    /// Creates an ECDsa instance from a PEM-formatted EC private key.
+    /// </summary>
+    /// <param name="userInputPrivateKey">
+    /// A string containing the PEM-formatted EC private key, including markers like 
+    /// "-----BEGIN EC PRIVATE KEY-----" and "-----END EC PRIVATE KEY-----".
+    /// </param>
+    /// <returns>
+    /// An <see cref="ECDsa"/> instance initialized with the provided private key.
+    /// </returns>
+    private ECDsa CreateECDsaByPrivateKey(string userInputPrivateKey)
+    {
+        var parsedKey = default(string);
+        try
+        {
+            var privateKey = ECDsa.Create();
+            parsedKey = ParseKey(userInputPrivateKey);
+            privateKey.ImportECPrivateKey(Convert.FromBase64String(parsedKey), out _);
+            return privateKey;
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"{nameof(CoinbaseApiClient)}.{nameof(CreateECDsaByPrivateKey)}: Failed to create ECDsa from the provided private key." +
+                $"Full Key: '{userInputPrivateKey}'. Parsed Key: '{parsedKey}'. Error: {ex.Message}",
+            ex);
+        }
     }
 
     /// <summary>
@@ -196,14 +223,11 @@ public class CoinbaseApiClient : IDisposable
     /// </remarks>
     internal string ParseKey(string key)
     {
-        var keyLines = key.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
-
-        // Check if the first and last lines are the BEGIN/END markers, and remove them if present
-        if (keyLines.First().Contains("BEGIN") && keyLines.Last().Contains("END"))
-        {
-            keyLines.RemoveAt(0);  // Remove the first line
-            keyLines.RemoveAt(keyLines.Count - 1);  // Remove the last line
-        }
+        var keyLines = key
+            .Replace("-", "")
+            .Replace("BEGIN EC PRIVATE KEY", "")
+            .Replace("END EC PRIVATE KEY", "")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
 
         return string.Join("", keyLines);
     }
