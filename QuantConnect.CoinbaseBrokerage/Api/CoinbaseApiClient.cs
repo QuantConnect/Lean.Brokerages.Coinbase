@@ -114,8 +114,9 @@ public class CoinbaseApiClient : IDisposable
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"{nameof(CoinbaseApiClient)}.{nameof(CreateECDsaByPrivateKey)}: Failed to create ECDsa from the provided private key." +
-                $"Full Key: '{userInputPrivateKey}'. Parsed Key: '{parsedKey}'. Error: {ex.Message}",
+            throw new InvalidOperationException($"{nameof(CoinbaseApiClient)}.{nameof(CreateECDsaByPrivateKey)}: Failed to create ECDsa from the provided private key.\n" +
+            "Please refer to the documentation for the correct key format: " +
+            $"https://www.quantconnect.com/docs/v2/cloud-platform/live-trading/brokerages/coinbase#02-Account-Types\n\n Error: {ex.Message}",
             ex);
         }
     }
