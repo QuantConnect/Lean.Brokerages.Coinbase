@@ -1,7 +1,7 @@
 {
 	"name" : "Coinbase",
 	"logo-url" : "https://cdn.quantconnect.com/i/tu/coinbase.png",
-	"min-deposit" : "0,01 USD",
+	"min-deposit" : "None",
 	"description": "Coinbase is a US-based cryptocurrency spot exchange. We are integrated with the Coinbase Advanced API which is in beta and has stability issues.",
 	
 	"platforms-features": [
