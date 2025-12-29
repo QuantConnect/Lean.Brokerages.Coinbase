@@ -146,7 +146,7 @@ namespace QuantConnect.Brokerages.Coinbase
 
             ValidateSubscription();
 
-            Initialize(webSocketUrl, new WebSocketClientWrapper(), null, name, privateKey);
+            Initialize(webSocketUrl, new WebSocketClientWrapper(), httpClient: null, name, privateKey);
 
             _job = job;
             _algorithm = algorithm;
