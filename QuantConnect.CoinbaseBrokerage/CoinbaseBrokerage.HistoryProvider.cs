@@ -132,7 +132,7 @@ namespace QuantConnect.Brokerages.Coinbase
                         // Note from Coinbase docs:
                         // If data points are readily available, your response may contain as many as 300 candles
                         // and some of those candles may precede your declared start value.
-                        yield break;
+                        continue;
                     }
 
                     var tradeBar = new TradeBar(

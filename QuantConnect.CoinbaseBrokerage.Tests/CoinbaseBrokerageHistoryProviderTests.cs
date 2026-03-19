@@ -91,6 +91,10 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, Time.OneHour, false);
                 yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, Time.OneDay, false);
 
+                // start date before asset existed on Coinbase (ETHUSD listed May 2016) - should still return available data
+                var ETHUSD = Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Coinbase);
+                yield return new TestCaseData(ETHUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(3800), false);
+
                 // invalid period
                 yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true);
 
