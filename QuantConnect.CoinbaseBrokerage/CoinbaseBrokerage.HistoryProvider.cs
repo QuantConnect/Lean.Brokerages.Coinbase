@@ -132,7 +132,7 @@ namespace QuantConnect.Brokerages.Coinbase
                         // Note from Coinbase docs:
                         // If data points are readily available, your response may contain as many as 300 candles
                         // and some of those candles may precede your declared start value.
-                        continue;
+                        yield break;
                     }
 
                     var tradeBar = new TradeBar(
@@ -150,7 +150,9 @@ namespace QuantConnect.Brokerages.Coinbase
                     yield return tradeBar;
                 }
 
-                startTime = lastTradeBar?.EndTime ?? request.EndTimeUtc;
+                // Advance by the batch window when no candles are returned (e.g. start date predates
+                // the asset listing), instead of jumping to EndTimeUtc and silently returning nothing.
+                startTime = lastTradeBar?.EndTime ?? endTime;
                 endTime = request.EndTimeUtc;
             } while (startTime < request.EndTimeUtc);
         }

@@ -31,7 +31,7 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
     public class CoinbaseBrokerageHistoryProviderTests
     {
         [Test, TestCaseSource(nameof(TestParameters))]
-        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, TimeSpan period, bool unsupported)
+        public void GetsHistory(Symbol symbol, Resolution resolution, TickType tickType, DateTime startUtc, DateTime endUtc, bool unsupported)
         {
             var brokerage = new CoinbaseBrokerage(
                 Config.Get("coinbase-url", "wss://advanced-trade-ws.coinbase.com"),
@@ -41,9 +41,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 null,
                 null);
 
-            var now = DateTime.UtcNow;
-            var request = new HistoryRequest(now.Add(-period),
-                now,
+            var request = new HistoryRequest(startUtc,
+                endUtc,
                 typeof(TradeBar),
                 symbol,
                 resolution,
@@ -79,41 +78,45 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             get
             {
                 TestGlobals.Initialize();
+                var now = DateTime.UtcNow;
                 var BTCUSD = Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Coinbase);
                 var BTCUSDC = Symbol.Create("BTCUSDC", SecurityType.Crypto, Market.Coinbase);
+                var ETHUSD = Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Coinbase);
 
                 // valid parameters
-                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, TimeSpan.FromDays(5), false);
-                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, Time.OneHour, false);
-                yield return new TestCaseData(BTCUSD, Resolution.Hour, TickType.Trade, Time.OneDay, false);
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), false);
+                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, now.AddDays(-5), now, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Minute, TickType.Trade, now.Add(-Time.OneHour), now, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Hour, TickType.Trade, now.Add(-Time.OneDay), now, false);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, now.AddDays(-15), now, false);
 
-                yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, Time.OneHour, false);
-                yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, Time.OneDay, false);
+                yield return new TestCaseData(BTCUSDC, Resolution.Minute, TickType.Trade, now.Add(-Time.OneHour), now, false);
+                yield return new TestCaseData(BTCUSDC, Resolution.Hour, TickType.Trade, now.Add(-Time.OneDay), now, false);
 
-                // start date before asset existed on Coinbase (ETHUSD listed May 2016) - should still return available data
-                var ETHUSD = Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Coinbase);
-                yield return new TestCaseData(ETHUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(3800), false);
+                // start before ETH listing (May 18 2016), listing falls within the first 300-day batch
+                yield return new TestCaseData(ETHUSD, Resolution.Daily, TickType.Trade, new DateTime(2016, 1, 1), new DateTime(2017, 1, 1), false);
+
+                // start well before listing, should return data from the listing date onwards
+                yield return new TestCaseData(ETHUSD, Resolution.Daily, TickType.Trade, new DateTime(2010, 1, 1), new DateTime(2017, 1, 1), false);
 
                 // invalid period
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(-15), true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Trade, now, now.AddDays(-15), true);
 
                 // quote tick type, null result
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, TimeSpan.FromDays(15), true);
-                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.OpenInterest, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.Quote, now.AddDays(-15), now, true);
+                yield return new TestCaseData(BTCUSD, Resolution.Daily, TickType.OpenInterest, now.AddDays(-15), now, true);
 
                 // invalid resolution, null result
-                yield return new TestCaseData(BTCUSD, Resolution.Tick, TickType.Trade, TimeSpan.FromSeconds(15), true);
-                yield return new TestCaseData(BTCUSD, Resolution.Second, TickType.Trade, Time.OneMinute, true);
+                yield return new TestCaseData(BTCUSD, Resolution.Tick, TickType.Trade, now.AddSeconds(-15), now, true);
+                yield return new TestCaseData(BTCUSD, Resolution.Second, TickType.Trade, now.Add(-Time.OneMinute), now, true);
 
                 // invalid symbol, null result
-                yield return new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.Coinbase), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(Symbol.Create("ABCXYZ", SecurityType.Crypto, Market.Coinbase), Resolution.Daily, TickType.Trade, now.AddDays(-15), now, true);
 
                 // invalid security type, null result
-                yield return new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(Symbols.EURGBP, Resolution.Daily, TickType.Trade, now.AddDays(-15), now, true);
 
                 // invalid market, null result
-                yield return new TestCaseData(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Binance), Resolution.Daily, TickType.Trade, TimeSpan.FromDays(15), true);
+                yield return new TestCaseData(Symbol.Create("BTCUSD", SecurityType.Crypto, Market.Binance), Resolution.Daily, TickType.Trade, now.AddDays(-15), now, true);
             }
         }
     }
