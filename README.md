@@ -21,7 +21,7 @@ This repository hosts the CoinbasePro Brokerage Plugin Integration with the Quan
 
 [Coinbase](https://www.coinbase.com/) was founded by Brian Armstrong and Fred Ehrsam in 2012 with the goal to "increase economic freedom in the world". Coinbase Pro provides access to trading Crypto for clients in over [100 countries](https://www.coinbase.com/places) with no minimum deposit. Coinbase Pro also provides a self-hosted Crypto wallet, a Visa debit rewards card, and Bitcoin collateral-backed lines of credit.
 
-For more information about the Coinbase Pro brokerage, see the [QuantConnect-Coinbase Pro Integration Page](https://www.quantconnect.com/docs/v2/our-platform/live-trading/brokerages/coinbase-pro).
+For more information about the Coinbase Pro brokerage, see the [QuantConnect-Coinbase Pro Integration Page](https://www.quantconnect.com/docs/v2/cloud-platform/live-trading/brokerages/coinbase).
 
 
 ## Using the Brokerage Plugin
@@ -38,7 +38,7 @@ For more information about the Coinbase Pro brokerage, see the [QuantConnect-Coi
 
 Follow these steps to start local live trading with the Coinbase Pro brokerage:
 
-1.  Open a terminal in your [CLI root directory](https://www.quantconnect.com/docs/v2/lean-cli/initialization/directory-structure#02-lean-init).
+1.  Open a terminal in your [organization workspace](https://www.quantconnect.com/docs/v2/lean-cli/initialization/organization-workspaces).
 2.  Run `lean live "<projectName>`" to start a live deployment wizard for the project in ./`<projectName>` and then enter the brokerage number.
 
     ```
@@ -119,7 +119,7 @@ Follow these steps to start local live trading with the Coinbase Pro brokerage:
         To enter multiple options, separate them with comma:
     ```
 
-If you select Polygon Data Feed, see [Polygon](https://www.quantconnect.com/docs/v2/lean-cli/live-trading/other-data-feeds/polygon) for set up instructions.
+If you select Polygon Data Feed, see [Polygon](https://www.quantconnect.com/docs/v2/lean-cli/live-trading/data-providers/polygon) for set up instructions.
 
 1. View the result in the `<projectName>live<timestamp>` directory. Results are stored in real-time in JSON format. You can save results to a different directory by providing the `--output <path>` option in step 2.
 
@@ -153,7 +153,7 @@ You can set the Brokerage Model with the following statements
 
     SetBrokerageModel(BrokerageName.Coinbase, AccountType.Cash);
 
-[Read Documentation](https://www.quantconnect.com/docs/v2/our-platform/live-trading/brokerages/coinbase-pro)
+[Read Documentation](https://www.quantconnect.com/docs/v2/cloud-platform/live-trading/brokerages/coinbase)
 
 ### Fees
 
