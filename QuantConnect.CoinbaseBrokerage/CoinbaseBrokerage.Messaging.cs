@@ -186,8 +186,9 @@ namespace QuantConnect.Brokerages.Coinbase
             foreach (var order in orders)
             {
                 // Skip: without an id we can't match it, and it would throw on the fill state lookup below
-                if (string.IsNullOrEmpty(order.OrderId))
+                if (string.IsNullOrWhiteSpace(order.OrderId))
                 {
+                    Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(HandleOrderUpdate)}: order update without an id: {JsonConvert.SerializeObject(order)}");
                     continue;
                 }
 
@@ -271,7 +272,7 @@ namespace QuantConnect.Brokerages.Coinbase
                 fillState.TotalFees = order.TotalFees.Value;
                 // keep the value baseline in sync even when the update did not carry 'filled_value'
                 fillState.FilledValue = order.FilledValue ?? fillState.FilledValue + fillPrice * fillQuantity;
-                fillState.Completed = leanOrderStatus == Orders.OrderStatus.Filled;
+                fillState.Completed = leanOrderStatus.IsClosed();
             }
         }
 

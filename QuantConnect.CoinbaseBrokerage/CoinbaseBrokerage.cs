@@ -201,13 +201,13 @@ namespace QuantConnect.Brokerages.Coinbase
                     }
                 }
 
-                return RejectOrder(order, "PlaceOrderInvalid", errorMessage);
+                return RejectOrder(order, BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage);
             }
 
             if (string.IsNullOrWhiteSpace(response.OrderId))
             {
                 // without the brokerage id we can't match its order updates, it would sit at submitted forever
-                return RejectOrder(order, "PlaceOrderMissingBrokerId",
+                return RejectOrder(order, BrokerageMessageType.Error, "PlaceOrderMissingBrokerId",
                     $"{nameof(CoinbaseBrokerage)}.{nameof(PlaceOrder)}: Coinbase accepted the order but did not return its order id, " +
                     "we are unable to track it. Please review your orders and holdings in your Coinbase account.");
             }
@@ -225,15 +225,15 @@ namespace QuantConnect.Brokerages.Coinbase
         /// Emits the invalid order event and brokerage message of a rejected order
         /// </summary>
         /// <param name="order">Lean Order</param>
-        /// <param name="code">Brokerage message code of the rejection</param>
-        /// <param name="errorMessage">Why the order was rejected</param>
+        /// <param name="type">The type of brokerage message, an error stops the algorithm</param>
+        /// <param name="code">The brokerage specific code</param>
+        /// <param name="message">Why the order was rejected</param>
         /// <returns>false, the <see cref="PlaceOrder"/> result</returns>
-        /// <remarks>A warning, an error would stop the algorithm and the rejection is already reported to it</remarks>
-        private bool RejectOrder(Order order, string code, string errorMessage)
+        private bool RejectOrder(Order order, BrokerageMessageType type, string code, string message)
         {
             OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
-            { Status = OrderStatus.Invalid, Message = errorMessage });
-            OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, code, errorMessage));
+            { Status = OrderStatus.Invalid, Message = message });
+            OnMessage(new BrokerageMessageEvent(type, code, message));
             return false;
         }
 

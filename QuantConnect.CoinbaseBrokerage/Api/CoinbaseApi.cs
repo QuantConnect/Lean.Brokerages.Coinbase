@@ -19,6 +19,7 @@ using System.Linq;
 using Newtonsoft.Json;
 using QuantConnect.Util;
 using QuantConnect.Orders;
+using QuantConnect.Logging;
 using System.Globalization;
 using QuantConnect.Securities;
 using System.Collections.Generic;
@@ -253,7 +254,14 @@ public class CoinbaseApi : IDisposable
 
         var response = _apiClient.ExecuteRequest(request);
 
-        return JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
+        var createOrderResponse = JsonConvert.DeserializeObject<CoinbaseCreateOrderResponse>(response.Content);
+
+        if (createOrderResponse.Success && string.IsNullOrWhiteSpace(createOrderResponse.OrderId))
+        {
+            Log.Error($"{nameof(CoinbaseApi)}.{nameof(CreateOrder)}: the order was accepted without an id: {response.Content}");
+        }
+
+        return createOrderResponse;
     }
 
     /// <summary>
