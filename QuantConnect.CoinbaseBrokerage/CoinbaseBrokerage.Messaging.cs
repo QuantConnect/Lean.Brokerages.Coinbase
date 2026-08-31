@@ -58,6 +58,12 @@ namespace QuantConnect.Brokerages.Coinbase
         private readonly ConcurrentDictionary<Symbol, Tuple<long, DateTime>> _tradeIds = new();
 
         /// <summary>
+        /// The fills already reported to lean, by brokerage order id
+        /// </summary>
+        /// <remarks>Updates carry cumulative values and the final one is sent more than once</remarks>
+        private readonly ConcurrentDictionary<string, OrderFillState> _orderFillStates = [];
+
+        /// <summary>
         /// Represents a rate limiter for controlling the frequency of WebSocket operations.
         /// </summary>
         /// <see cref="https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-rate-limits"/>
@@ -179,6 +185,18 @@ namespace QuantConnect.Brokerages.Coinbase
         {
             foreach (var order in orders)
             {
+                // Skip: without an id we can't match it, and it would throw on the fill state lookup below
+                if (string.IsNullOrEmpty(order.OrderId))
+                {
+                    continue;
+                }
+
+                // the final update is sent more than once, skip it cheaply before the order lookup
+                if (_orderFillStates.TryGetValue(order.OrderId, out var fillState) && fillState.Completed)
+                {
+                    continue;
+                }
+
                 var leanOrder = OrderProvider.GetOrdersByBrokerageId(order.OrderId).FirstOrDefault();
 
                 if (leanOrder == null)
@@ -205,13 +223,33 @@ namespace QuantConnect.Brokerages.Coinbase
                     continue;
                 }
 
-                // order.CumulativeQuantity > 0 && order.LeavesQuantity != 0 && order.Status == Models.Enums.OrderStatus.Open
-                var leanOrderStatus = Orders.OrderStatus.PartiallyFilled;
+                // the status closes the order, 'leaves_quantity' is in quote units for quote sized market orders
+                var leanOrderStatus = order.Status == Models.Enums.OrderStatus.Filled
+                    ? Orders.OrderStatus.Filled
+                    : Orders.OrderStatus.PartiallyFilled;
 
-                if (order.LeavesQuantity == 0 && order.Status == Models.Enums.OrderStatus.Filled)
+                fillState ??= _orderFillStates.GetOrAdd(order.OrderId, static _ => new OrderFillState());
+
+                // updates hold cumulative values, lean expects the increment
+                var fillQuantity = order.CumulativeQuantity.Value - fillState.CumulativeQuantity;
+                var orderFee = order.TotalFees.Value - fillState.TotalFees;
+
+                // Skip: stale update that arrived out of order, it holds quantity we already reported
+                if (fillQuantity < 0)
                 {
-                    leanOrderStatus = Orders.OrderStatus.Filled;
+                    continue;
                 }
+
+                // Skip: duplicate of a non-final update, there is no new quantity to report
+                if (fillQuantity == 0 && leanOrderStatus != Orders.OrderStatus.Filled)
+                {
+                    continue;
+                }
+
+                // price the fill by the value it added, 'avg_price' is the order average so far
+                var fillPrice = fillQuantity != 0 && order.FilledValue.HasValue
+                    ? (order.FilledValue.Value - fillState.FilledValue) / fillQuantity
+                    : order.AveragePrice.Value;
 
                 CurrencyPairUtil.DecomposeCurrencyPair(leanOrder.Symbol, out _, out var quoteCurrency);
 
@@ -221,12 +259,19 @@ namespace QuantConnect.Brokerages.Coinbase
                     eventTimestampUtc,
                     leanOrderStatus,
                     leanOrder.Direction,
-                    order.AveragePrice.Value,
-                    order.CumulativeQuantity.Value * Math.Sign(leanOrder.Quantity),
-                     new OrderFee(new CashAmount(order.TotalFees.Value, quoteCurrency))
+                    fillPrice,
+                    fillQuantity * Math.Sign(leanOrder.Quantity),
+                     new OrderFee(new CashAmount(orderFee, quoteCurrency))
                     );
 
                 OnOrderEvent(orderEvent);
+
+                // commit after the event is out, a throw above leaves the state ready to retry on the next update
+                fillState.CumulativeQuantity = order.CumulativeQuantity.Value;
+                fillState.TotalFees = order.TotalFees.Value;
+                // keep the value baseline in sync even when the update did not carry 'filled_value'
+                fillState.FilledValue = order.FilledValue ?? fillState.FilledValue + fillPrice * fillQuantity;
+                fillState.Completed = leanOrderStatus == Orders.OrderStatus.Filled;
             }
         }
 
@@ -537,6 +582,32 @@ namespace QuantConnect.Brokerages.Coinbase
         private Symbol GetSimilarSymbolUSDC(string productIdUSD)
         {
             return _symbolMapper.GetLeanSymbol(productIdUSD.Split('-')[0] + "-USDC", SecurityType.Crypto, MarketName);
+        }
+
+        /// <summary>
+        /// The fills already reported to lean for a brokerage order
+        /// </summary>
+        private class OrderFillState
+        {
+            /// <summary>
+            /// Quantity, in base currency, already reported
+            /// </summary>
+            public decimal CumulativeQuantity { get; set; }
+
+            /// <summary>
+            /// Fees already reported
+            /// </summary>
+            public decimal TotalFees { get; set; }
+
+            /// <summary>
+            /// Value, in quote currency, already reported
+            /// </summary>
+            public decimal FilledValue { get; set; }
+
+            /// <summary>
+            /// Whether the final fill was reported, later updates are duplicates
+            /// </summary>
+            public bool Completed { get; set; }
         }
     }
 }
