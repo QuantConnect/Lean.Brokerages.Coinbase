@@ -62,6 +62,12 @@ public class CoinbaseWebSocketOrderResponse
     public decimal? AveragePrice { get; set; }
 
     /// <summary>
+    /// Value of the filled quantity so far, in quote currency and excluding fees
+    /// </summary>
+    [JsonProperty("filled_value")]
+    public decimal? FilledValue { get; set; }
+
+    /// <summary>
     /// Commission paid for the order
     /// </summary>
     [JsonProperty("total_fees")]

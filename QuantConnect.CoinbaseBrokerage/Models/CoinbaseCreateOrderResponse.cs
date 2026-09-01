@@ -37,12 +37,16 @@ public readonly struct CoinbaseCreateOrderResponse
     /// <summary>
     /// The ID of the order created
     /// </summary>
+    /// <remarks>
+    /// Returned in <see cref="SuccessResponse"/>, the undocumented top level 'order_id' is only a fallback
+    /// </remarks>
     [JsonProperty("order_id")]
     public string OrderId { get; }
 
     /// <summary>
     /// If Success - true, get success response data otherwise <see cref="ErrorResponse"/>
     /// </summary>
+    [JsonProperty("success_response")]
     public SuccessResponse? SuccessResponse { get; }
 
     /// <summary>
@@ -63,7 +67,9 @@ public readonly struct CoinbaseCreateOrderResponse
     {
         Success = success;
         FailureReason = failureReason;
-        OrderId = orderId;
+        // the API sends the id in the success response only
+        var successOrderId = successResponse?.OrderId;
+        OrderId = string.IsNullOrWhiteSpace(successOrderId) ? orderId : successOrderId;
         SuccessResponse = successResponse;
         ErrorResponse = errorResponse;
         OrderConfiguration = orderConfiguration;

@@ -78,7 +78,7 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <summary>
         /// Order provider
         /// </summary>
-        protected IOrderProvider OrderProvider { get; private set; }
+        protected IOrderProvider OrderProvider { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CoinbaseBrokerage"/> class with the specified name.
@@ -182,13 +182,34 @@ namespace QuantConnect.Brokerages.Coinbase
 
             if (!response.Success)
             {
-                var errorMessage =
-                    response.ErrorResponse.Value.Error == BrokerageEnums.FailureCreateOrderReason.UnknownFailureReason
-                    ? response.ErrorResponse.Value.PreviewFailureReason : response.ErrorResponse.Value.Error.ToString();
-                OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
-                { Status = OrderStatus.Invalid, Message = errorMessage });
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage));
-                return false;
+                // the rejection is in the error response, else fall back to the top level failure reason
+                var errorMessage = response.FailureReason.ToString();
+                if (response.ErrorResponse.HasValue)
+                {
+                    var errorResponse = response.ErrorResponse.Value;
+                    if (errorResponse.Error != BrokerageEnums.FailureCreateOrderReason.UnknownFailureReason)
+                    {
+                        errorMessage = errorResponse.Error.ToString();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(errorResponse.PreviewFailureReason))
+                    {
+                        errorMessage = errorResponse.PreviewFailureReason;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(errorResponse.Message))
+                    {
+                        errorMessage = errorResponse.Message;
+                    }
+                }
+
+                return RejectOrder(order, BrokerageMessageType.Warning, "PlaceOrderInvalid", errorMessage);
+            }
+
+            if (string.IsNullOrWhiteSpace(response.OrderId))
+            {
+                // without the brokerage id we can't match its order updates, it would sit at submitted forever
+                return RejectOrder(order, BrokerageMessageType.Error, "PlaceOrderMissingBrokerId",
+                    $"{nameof(CoinbaseBrokerage)}.{nameof(PlaceOrder)}: Coinbase accepted the order but did not return its order id, " +
+                    "we are unable to track it. Please review your orders and holdings in your Coinbase account.");
             }
 
             order.BrokerId.Add(response.OrderId);
@@ -198,6 +219,22 @@ namespace QuantConnect.Brokerages.Coinbase
             { Status = OrderStatus.Submitted });
 
             return true;
+        }
+
+        /// <summary>
+        /// Emits the invalid order event and brokerage message of a rejected order
+        /// </summary>
+        /// <param name="order">Lean Order</param>
+        /// <param name="type">The type of brokerage message, an error stops the algorithm</param>
+        /// <param name="code">The brokerage specific code</param>
+        /// <param name="message">Why the order was rejected</param>
+        /// <returns>false, the <see cref="PlaceOrder"/> result</returns>
+        private bool RejectOrder(Order order, BrokerageMessageType type, string code, string message)
+        {
+            OnOrderEvent(new OrderEvent(order, DateTime.UtcNow, OrderFee.Zero, "CoinbaseBrokerage Order Event")
+            { Status = OrderStatus.Invalid, Message = message });
+            OnMessage(new BrokerageMessageEvent(type, code, message));
+            return false;
         }
 
         /// <summary>
@@ -323,6 +360,14 @@ namespace QuantConnect.Brokerages.Coinbase
 
                 leanOrder.Status = ConvertOrderStatus(order);
                 leanOrder.BrokerId.Add(order.OrderId);
+
+                // seed the fill state with what already filled, later updates must only report the increments
+                _orderFillStates[order.OrderId] = new OrderFillState
+                {
+                    CumulativeQuantity = order.FilledSize,
+                    TotalFees = order.TotalFees,
+                    FilledValue = order.FilledValue,
+                };
 
                 list.Add(leanOrder);
             }
