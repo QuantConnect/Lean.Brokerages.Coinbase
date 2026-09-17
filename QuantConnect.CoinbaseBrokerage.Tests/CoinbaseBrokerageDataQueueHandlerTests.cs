@@ -253,6 +253,65 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             cancelationToken.Cancel();
         }
 
+        [Test]
+        public void StreamsQuotesForMoreSymbolsThanASingleConnectionAllows()
+        {
+            // coinbase rejects level2 subscriptions above 30 per connection, trades are not limited
+            var tickers = new[]
+            {
+                "BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "DOGE", "DOT", "LINK", "LTC", "BCH", "UNI", "AAVE", "ATOM", "NEAR",
+                "APT", "ARB", "OP", "SUI", "HBAR", "XLM", "ALGO", "FIL", "ICP", "ETC", "CRV", "MKR", "SNX", "COMP", "GRT",
+                "SHIB", "PEPE", "BONK", "INJ", "TIA", "SEI", "STX", "IMX", "RNDR", "FET", "LDO", "ENS", "SAND", "MANA", "AXS",
+                "CHZ", "XTZ", "EOS", "ZEC", "BAT", "ZRX", "YFI", "SUSHI", "1INCH", "ANKR", "SKL", "STORJ", "LRC", "MASK", "APE"
+            };
+
+            var symbolsWithQuotes = new HashSet<Symbol>();
+            var configs = new List<SubscriptionDataConfig>();
+            var enumerators = new List<IEnumerator<BaseData>>();
+            foreach (var ticker in tickers)
+            {
+                var symbol = Symbol.Create(ticker + "USD", SecurityType.Crypto, Market.Coinbase);
+                var config = new SubscriptionDataConfig(GetSubscriptionDataConfig<Tick>(symbol, Resolution.Tick), tickType: TickType.Quote);
+                var enumerator = _brokerage.Subscribe(config, (s, e) => { });
+                if (enumerator == null)
+                {
+                    // not supported any more
+                    continue;
+                }
+                configs.Add(config);
+                enumerators.Add(enumerator);
+            }
+
+            Assert.Greater(configs.Count, 40);
+
+            // a single consumer for all, 'ProcessFeed' would spin a thread for each
+            var expected = (int)(configs.Count * 0.9);
+            var end = DateTime.UtcNow.AddSeconds(120);
+            while (symbolsWithQuotes.Count < expected && DateTime.UtcNow < end)
+            {
+                foreach (var enumerator in enumerators)
+                {
+                    while (enumerator.MoveNext() && enumerator.Current != null)
+                    {
+                        if (enumerator.Current is Tick { TickType: TickType.Quote } tick)
+                        {
+                            symbolsWithQuotes.Add(tick.Symbol);
+                        }
+                    }
+                }
+                Thread.Sleep(100);
+            }
+
+            foreach (var config in configs)
+            {
+                _brokerage.Unsubscribe(config);
+            }
+
+            Log.Trace($"Got quotes for {symbolsWithQuotes.Count} of {configs.Count} symbols");
+            var missing = configs.Select(x => x.Symbol).Where(x => !symbolsWithQuotes.Contains(x)).Select(x => x.Value);
+            Assert.GreaterOrEqual(symbolsWithQuotes.Count, expected, $"No quotes for: {string.Join(",", missing)}");
+        }
+
         private static IEnumerable<IEnumerable<Symbol>> BitcoinTradingPairs
         {
             get
@@ -313,7 +372,8 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
                 });
             }
 
-            Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(30), cancelationTokenSource.Token));
+            Assert.IsTrue(resetEvent.WaitOne(TimeSpan.FromSeconds(30), cancelationTokenSource.Token),
+                $"Data received: {string.Join(", ", dataReceivedForType.Select(x => $"{x.Key.Item2.Value} {x.Key.Item1.Name}={x.Value}"))}");
 
             foreach (var config in configs)
             {
