@@ -163,11 +163,16 @@ namespace QuantConnect.Brokerages.Coinbase
             _coinbaseApi = new CoinbaseApi(_symbolMapper, algorithm?.Portfolio, name, privateKey, restApiUrl);
             OrderProvider = orderProvider;
 
-            SubscriptionManager = new EventBasedDataQueueHandlerSubscriptionManager()
-            {
-                SubscribeImpl = (symbols, _) => SubscribeSymbolsOnDataChannels(symbols.ToList()),
-                UnsubscribeImpl = (symbols, _) => Unsubscribe(symbols)
-            };
+            SubscriptionManager = new BrokerageMultiWebSocketSubscriptionManager(
+                webSocketUrl,
+                MaximumSymbolsPerWebSocket,
+                0,
+                null,
+                CreateDataWebSocket,
+                (webSocket, symbol) => SubscribeSymbolsOnDataChannels(new List<Symbol> { symbol }, webSocket: webSocket),
+                Unsubscribe,
+                message => OnMessage(this, message),
+                TimeSpan.Zero);
         }
 
         #region IBrokerage

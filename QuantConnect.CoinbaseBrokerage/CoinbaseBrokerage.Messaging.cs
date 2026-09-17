@@ -70,9 +70,19 @@ namespace QuantConnect.Brokerages.Coinbase
         private RateGate _webSocketRateLimit = new(7, TimeSpan.FromSeconds(1));
 
         /// <summary>
-        /// Represents an integer variable used to keep track of sequence numbers associated with WS feed messages.
+        /// The maximum symbols per connection, above it coinbase rejects level2 with 'too many L2 streams requested in a single session'
         /// </summary>
-        private int _sequenceNumbers = 0;
+        private const int MaximumSymbolsPerWebSocket = 30;
+
+        /// <summary>
+        /// The connection we follow for each data stream, by channel and brokerage product id
+        /// </summary>
+        private readonly ConcurrentDictionary<(string, string), StreamOwner> _streamOwner = new();
+
+        /// <summary>
+        /// Keeps track of the sequence numbers associated with WS feed messages, by connection
+        /// </summary>
+        private readonly ConcurrentDictionary<object, int> _sequenceNumbers = new();
 
         /// <summary>
         /// Use to sync subscription process on WebSocket User Updates
@@ -120,29 +130,35 @@ namespace QuantConnect.Brokerages.Coinbase
                 //this means an error has occurred
                 if (channel == null)
                 {
-                    Log.Debug($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}.ERROR: {data.Message}");
+                    Log.Error($"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}.ERROR: {data.Message}");
                     return;
                 }
 
                 var newSequenceNumbers = obj["sequence_num"].Value<int>();
 
+                var connection = (object)webSocketMessage.WebSocket ?? this;
+                _sequenceNumbers.TryGetValue(connection, out var sequenceNumbers);
+
                 // https://docs.cloud.coinbase.com/advanced-trade-api/docs/ws-overview#sequence-numbers
-                if (newSequenceNumbers != 0 && newSequenceNumbers != _sequenceNumbers + 1)
+                if (newSequenceNumbers != 0 && newSequenceNumbers != sequenceNumbers + 1)
                 {
                     OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "SequenceNumbers",
                         $"{nameof(CoinbaseBrokerage)}.{nameof(OnMessage)}: sequence number mismatch. If Sequence numbers are greater that a message has been dropped else ones are less can be ignored or represent a message that has arrived out of order."));
                 }
 
-                _sequenceNumbers = newSequenceNumbers;
+                _sequenceNumbers[connection] = newSequenceNumbers;
 
                 switch (channel)
                 {
                     case CoinbaseWebSocketChannels.MarketTrades:
                         var message = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseMarketTradesEvent>>();
-                        if (message.Events[0].Type == WebSocketEventType.Update)
+                        HandleIfStreamOwner(channel, message.Events[0].Trades.FirstOrDefault()?.ProductId, message.Events[0].Type, connection, () =>
                         {
-                            EmitTradeTick(message.Events[0]);
-                        }
+                            if (message.Events[0].Type == WebSocketEventType.Update)
+                            {
+                                EmitTradeTick(message.Events[0]);
+                            }
+                        });
                         break;
                     case CoinbaseWebSocketChannels.User:
                         var orderUpdate = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseUserEvent>>();
@@ -156,23 +172,45 @@ namespace QuantConnect.Brokerages.Coinbase
                         break;
                     case CoinbaseWebSocketChannels.Level2Response:
                         var level2Data = obj.ToObject<CoinbaseWebSocketMessage<CoinbaseLevel2Event>>();
-                        switch (level2Data.Events[0].Type)
+                        HandleIfStreamOwner(channel, level2Data.Events[0].ProductId, level2Data.Events[0].Type, connection, () =>
                         {
-                            case WebSocketEventType.Snapshot:
-                                Level2Snapshot(level2Data.Events[0]);
-                                break;
-                            case WebSocketEventType.Update:
-                                Level2Update(level2Data.Events[0]);
-                                break;
-                            default:
-                                throw new ArgumentException();
-                        };
+                            switch (level2Data.Events[0].Type)
+                            {
+                                case WebSocketEventType.Snapshot:
+                                    Level2Snapshot(level2Data.Events[0]);
+                                    break;
+                                case WebSocketEventType.Update:
+                                    Level2Update(level2Data.Events[0]);
+                                    break;
+                                default:
+                                    throw new ArgumentException();
+                            };
+                        });
                         break;
                 }
             }
             catch (Exception ex)
             {
                 OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, -1, $"Parsing wss message failed. Data: {ex.Message} Exception: {ex}"));
+            }
+        }
+
+        /// <summary>
+        /// Handles the message if the connection is the one we follow for the given stream, so data streamed by more than one is handled once
+        /// </summary>
+        private void HandleIfStreamOwner(string channel, string productId, WebSocketEventType eventType, object connection, Action handler)
+        {
+            var streamOwner = _streamOwner.GetOrAdd((channel, productId), _ => new StreamOwner());
+            lock (streamOwner)
+            {
+                if (eventType == WebSocketEventType.Snapshot || streamOwner.Connection == null)
+                {
+                    streamOwner.Connection = connection;
+                }
+                if (streamOwner.Connection == connection)
+                {
+                    handler();
+                }
             }
         }
 
@@ -489,21 +527,33 @@ namespace QuantConnect.Brokerages.Coinbase
                 {
                     OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "SubscriptionOnWSFeed", "Failed to subscribe on `user update` channels"));
                 }
-
-                SubscribeSymbolsOnDataChannels(GetSubscribed().ToList());
             }, _cancellationTokenSourceReSubscription.Token);
 
             return true;
         }
 
         /// <summary>
-        /// Ends current subscriptions
+        /// Ends the symbol subscription in the given connection
         /// </summary>
-        public bool Unsubscribe(IEnumerable<Symbol> leanSymbols)
+        private bool Unsubscribe(IWebSocket webSocket, Symbol symbol)
         {
-            SubscribeSymbolsOnDataChannels(leanSymbols.ToList(), WebSocketSubscriptionType.Unsubscribe);
+            var productId = _symbolMapper.GetBrokerageSymbol(symbol);
+            foreach (var streamOwner in _streamOwner.Where(x => x.Key.Item2 == productId || x.Key.Item2 + "C" == productId).Select(x => x.Value))
+            {
+                lock (streamOwner)
+                {
+                    if (streamOwner.Connection == webSocket)
+                    {
+                        streamOwner.Connection = null;
+                    }
+                }
+            }
 
-            return true;
+            if (!webSocket.IsOpen)
+            {
+                return true;
+            }
+            return SubscribeSymbolsOnDataChannels(new List<Symbol> { symbol }, WebSocketSubscriptionType.Unsubscribe, webSocket);
         }
 
         /// <summary>
@@ -516,7 +566,7 @@ namespace QuantConnect.Brokerages.Coinbase
         /// invoking the <see cref="ManageChannelSubscription"/> method with the appropriate parameters.
         /// </remarks>
         /// <seealso cref="ManageChannelSubscription"/>
-        private bool SubscribeSymbolsOnDataChannels(List<Symbol> symbols, WebSocketSubscriptionType subscriptionType = WebSocketSubscriptionType.Subscribe)
+        private bool SubscribeSymbolsOnDataChannels(List<Symbol> symbols, WebSocketSubscriptionType subscriptionType = WebSocketSubscriptionType.Subscribe, IWebSocket webSocket = null)
         {
             var products = symbols.Select(symbol => _symbolMapper.GetBrokerageSymbol(symbol)).ToList();
 
@@ -529,7 +579,7 @@ namespace QuantConnect.Brokerages.Coinbase
             {
                 foreach (var chunkProduct in products.Chunk(20))
                 {
-                    ManageChannelSubscription(subscriptionType, channel, chunkProduct.ToList());
+                    ManageChannelSubscription(subscriptionType, channel, chunkProduct.ToList(), webSocket);
                 }
             }
 
@@ -544,14 +594,16 @@ namespace QuantConnect.Brokerages.Coinbase
         /// <param name="productIds">Optional list of product IDs associated with the subscription.</param>
         /// <exception cref="ArgumentException"></exception>
         /// <exception cref="InvalidOperationException"></exception>
-        private void ManageChannelSubscription(WebSocketSubscriptionType subscriptionType, string channel, List<string> productIds = null)
+        /// <param name="webSocket">The connection to use, defaults to the main one</param>
+        private void ManageChannelSubscription(WebSocketSubscriptionType subscriptionType, string channel, List<string> productIds = null, IWebSocket webSocket = null)
         {
             if (string.IsNullOrWhiteSpace(channel))
             {
                 throw new ArgumentException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: ChannelRequired:", nameof(channel));
             }
 
-            if (!IsConnected)
+            webSocket ??= WebSocket;
+            if (!webSocket.IsOpen)
             {
                 throw new InvalidOperationException($"{nameof(CoinbaseBrokerage)}.{nameof(ManageChannelSubscription)}: WebSocketMustBeConnected");
             }
@@ -565,7 +617,27 @@ namespace QuantConnect.Brokerages.Coinbase
 
             _webSocketRateLimit.WaitToProceed();
 
-            WebSocket.Send(json);
+            webSocket.Send(json);
+        }
+
+        /// <summary>
+        /// Creates a connection for data subscriptions
+        /// </summary>
+        private WebSocketClientWrapper CreateDataWebSocket()
+        {
+            var webSocket = new WebSocketClientWrapper();
+            webSocket.Open += (_, _) => Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    ManageChannelSubscription(WebSocketSubscriptionType.Subscribe, CoinbaseWebSocketChannels.Heartbeats, webSocket: webSocket);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, $"{nameof(CoinbaseBrokerage)}.{nameof(CreateDataWebSocket)}: failed to subscribe to heartbeats");
+                }
+            });
+            return webSocket;
         }
 
         /// <summary>
@@ -583,6 +655,17 @@ namespace QuantConnect.Brokerages.Coinbase
         private Symbol GetSimilarSymbolUSDC(string productIdUSD)
         {
             return _symbolMapper.GetLeanSymbol(productIdUSD.Split('-')[0] + "-USDC", SecurityType.Crypto, MarketName);
+        }
+
+        /// <summary>
+        /// The connection we follow for a data stream
+        /// </summary>
+        private class StreamOwner
+        {
+            /// <summary>
+            /// The connection, null if none yet or it unsubscribed
+            /// </summary>
+            public object Connection { get; set; }
         }
 
         /// <summary>
