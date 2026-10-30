@@ -282,7 +282,8 @@ namespace QuantConnect.Brokerages.Coinbase
 
             if (!cancelOrder.Success)
             {
-                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Error, "CancelOrder",
+                // A cancel that loses the race with a fill fails with UNKNOWN_CANCEL_ORDER: the order stays as it is, so it isn't an error
+                OnMessage(new BrokerageMessageEvent(BrokerageMessageType.Warning, "CancelOrder",
                     $"Coinbase has not canceled order, error: {cancelOrder.FailureReason}"));
                 return false;
             }
