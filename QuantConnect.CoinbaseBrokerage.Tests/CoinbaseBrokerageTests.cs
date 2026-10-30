@@ -268,6 +268,24 @@ namespace QuantConnect.Brokerages.Coinbase.Tests
             Assert.Throws<NotSupportedException>(() => Brokerage.UpdateOrder(order));
         }
 
+        [Test]
+        public void CancelOrderRejectedByCoinbaseIsWarning()
+        {
+            var order = new LimitOrder(Symbol, GetDefaultQuantity(), 10_000m, DateTime.UtcNow);
+            order.BrokerId.Add("44703527-de90-4aac-ae52-8e6910dee426");
+            var messages = new List<BrokerageMessageEvent>();
+            EventHandler<BrokerageMessageEvent> messageHandler = (_, messageEvent) => messages.Add(messageEvent);
+            Brokerage.Message += messageHandler;
+
+            var canceled = Brokerage.CancelOrder(order);
+
+            Brokerage.Message -= messageHandler;
+            Assert.IsFalse(canceled);
+            Assert.AreEqual(1, messages.Count);
+            Assert.AreEqual(BrokerageMessageType.Warning, messages[0].Type);
+            Assert.That(messages[0].Message, Does.Contain("UNKNOWN_CANCEL_ORDER"));
+        }
+
         private Security CreateSecurity(Symbol symbol)
         {
             var timezone = TimeZones.NewYork;
