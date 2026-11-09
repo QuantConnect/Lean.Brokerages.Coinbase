@@ -28,7 +28,7 @@ For more information about the Coinbase Pro brokerage, see the [QuantConnect-Coi
   
 ### Deploying Coinbase Pro with VSCode User Interace
 
-  You can deploy using a visual interface in the QuantConnect Cloud. For more information see the [QuantConnect-CoinbasePro Integration Page](https://www.quantconnect.com/brokerages/coinbasepro).
+  You can deploy using a visual interface in the QuantConnect Cloud. For more information see the [QuantConnect-Coinbase Integration Page](https://www.quantconnect.com/docs/v2/cloud-platform/live-trading/brokerages/coinbase).
 
  ![deploy-coinbase](https://user-images.githubusercontent.com/38889814/188244653-4feb1f60-d693-4dde-b47b-009dc3295a27.gif)
  
